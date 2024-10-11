@@ -4,15 +4,11 @@ Dienstag, 8.10.24
 --------------------------------
 Aufgabe 1 - Wärmeübertragung in einem Rohr
 - Berechnung
-- Korrelation
-- Print
+- Ausgabe plotten
 
 """
 import numpy as np
-
-# Stoffwerte bei 300K
-Prandtl_values = {'Luft': 0.707, 'Wasser': 5.83, 'Ethylenglykol': 151}
-
+import matplotlib.pyplot as plt
 
 # Funktion: Nusselt nach Aufgabe 1a
 def nusselt_a(re, pr, n=1):
@@ -25,16 +21,33 @@ def nusselt_a(re, pr, n=1):
     :param n: Exponent
     :return nu_a: Nusselt-Zahl
     """
-    if re >= 10000:
-        print("Die Reynoldszahl liegt außerhalb des gültigen Bereichs")
-    elif pr <= 0.6 or pr >= 160:
-        print("Die Prandtl-Zahl liegt außerhalb des gültigen Bereichs")
-    else:
-        nu_a = 0.023 * re ** (4 / 5) * pr ** n
+    """
+    # Alter weg 
+    if re < 10000:
+        return np.nan     # Ungültige Reynolds-Zahl
+    if pr <= 0.6 or pr >= 160:
+        return np.nan     # Ungültige Prandtl-Zahl
+
+    return 0.023 * re ** (4 / 5) * pr ** n  # Berechnung Nusselt-Zahl nach a
+    """
+    nu_a = np.where(
+        (re >= 10000) & (pr > 0.6) & (pr < 160),  # Bedingung für gültige Reynolds-Zahl und Prandtl-Zahl
+        0.023 * re ** (4 / 5) * pr ** n,          # Berechnung von Nusselt-Zahl nach a falls Bedingungen erfüllt
+        np.nan                                    # NaN falls Bedingungen nicht erfüllt
+    )
     return nu_a
 
-# Variablen
-re_range = np.geomspace(10,2e5)
+# Variablen 1a
+re_array = np.linspace(10000,2e5)  # Reynolds-Zahl Vektor
+Prandtl_values = np.array([0.707, 5.83, 151]) # Prandtl-Zahl für Luft, Wasser, Ethylenglykol bei 300K
 
-# Ploten der Funktionen
-Nu1 = nusselt_a(re_range, Prandtl_values)
+Nu_a = nusselt_a(re_array,0.707)
+
+# Ausgabe Ploten
+plt.style.use('ggplot')
+plt.figure()
+plt.plot(re_array,Nu_a)
+plt.xlabel('Reynolds-Zahl')
+plt.ylabel('Nusselt-Zahl')
+#plt.legend()
+plt.show()
