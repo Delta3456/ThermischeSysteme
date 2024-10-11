@@ -118,3 +118,30 @@ d = 0.03  # Durchmesser [m]
 u = np.linspace(0.01, 100)  # Geschwindigkeit [m/s]
 lam = np.array([26.3e-3, 613e-3, 252e-3])  # Wärmeleitfähigkeit [W/m K] (Luft, Wasser, Ethylenglykol)
 v = np.array([15.89e-6, 8.5757e-7, 14.1e-6])  # Kin. Viskosität [m²/s] (Luft, Wasser, Ethylenglykol)
+
+# Aufgabe 1b plotten --------------------------------
+plt.style.use('ggplot')
+fig, axs = plt.subplots(1, 3)
+
+for i, pr_value in enumerate(Prandtl_values):
+    re_values = re_rohr(u, d, v[i])  # Reynolds-Zahl für aktuelle Geschwindigkeit und Stoff
+
+    # Berechnung der Nusselt-Zahlen
+    Nu_a_values = nusselt_a(re_values, pr_value)
+    Nu_b_values = nusselt_b(re_values, pr_value)
+
+    # Berechnung der Wärmeübergangskoeffizienten
+    alpha_a_values = warmeuebergangskoef(Nu_a_values, lam[i], d)
+    alpha_b_values = warmeuebergangskoef(Nu_b_values, lam[i], d)
+
+    # Plot der Ergebnisse
+    axs[i].plot(u, alpha_a_values, label=f'α (Nusselt a)', color='b')
+    axs[i].plot(u, alpha_b_values, label=f'α (Nusselt b)', color='r')
+
+    axs[i].set_xlabel('Geschwindigkeit [m/s]')
+    axs[i].set_ylabel('Wärmeübergangskoeffizient α [W/(m²K)]')
+    axs[i].set_title(f'{stoffe[i]}')
+    axs[i].legend(loc='best')
+
+plt.tight_layout()
+plt.show()
