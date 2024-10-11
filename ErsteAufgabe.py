@@ -47,12 +47,45 @@ def nusselt_b(re, pr):
     return nu_b
 
 
-# Variablen für Aufgabe 1a
+def warmeuebergangskoef(nu, lam, d):
+    """
+    Berechnung des Wärmeübergangskoeffizienten
+    Variablen:
+    - nu: Nusselt-Zahl, [-]
+    - d: Durchmesser [m]
+    - lam: Wärmeleitfähigkeit [W/m K]
+    - alpha: Wärmeübergangskoeffizient [W/m²K]
+    Formel:
+    a = (nu*lambda)/d
+    """
+    alpha = (nu * lam) / d
+    return alpha
+
+
+def re_rohr(u, d, v):
+    """
+    Berechnung der Reynolds-Zahl in Rohrströmung
+    Variablen:
+    - u: Geschwindigkeit [m/s]
+    - d: Durchmesser [m]
+    - v: Kinematische Viskosität [m²/s]
+    - re: Reynolds-Zahl [-]
+    Formel:
+    - re = (u∗d)/v
+    """
+    re = (u * d) / v
+    return re
+
+
+# Skript Aufgabe 1a----------------------------------
+# if __name__ == "__main__": # Alles was nicht in andere Module importiert werden soll hier hinter
+
+# Variablen -------------------------------------
 re_array = np.linspace(10000, 5e6)  # Reynolds-Zahl Vektor
 Prandtl_values = np.array([0.707, 5.83, 151])  # Prandtl-Zahl für Luft, Wasser, Ethylenglykol bei 300K
 stoffe = ['Luft', 'Wasser', 'Ethylenglykol']  # Die dazugehörigen Stoffe
 
-# Ausgabe plotten
+# Aufgabe 1a plotten --------------------------------
 plt.style.use('ggplot')
 fig, axs = plt.subplots(1, 3)
 
@@ -78,3 +111,10 @@ for i, pr_value in enumerate(Prandtl_values):
 
 plt.tight_layout()
 plt.show()
+
+# Skript Aufgabe 1b----------------------------------
+# Variablen
+d = 0.03  # Durchmesser [m]
+u = np.linspace(0.01, 100)  # Geschwindigkeit [m/s]
+lam = np.array([26.3e-3, 613e-3, 252e-3])  # Wärmeleitfähigkeit [W/m K] (Luft, Wasser, Ethylenglykol)
+v = np.array([15.89e-6, 8.5757e-7, 14.1e-6])  # Kin. Viskosität [m²/s] (Luft, Wasser, Ethylenglykol)
