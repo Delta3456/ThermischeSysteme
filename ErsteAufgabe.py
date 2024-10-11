@@ -51,21 +51,26 @@ def nusselt_b(re, pr, n=1):
 
 
 # Variablen 1a
-re_array = np.linspace(3000, 5e56)  # Reynolds-Zahl Vektor
+re_array = np.linspace(3000, 5e6)  # Reynolds-Zahl Vektor
 Prandtl_values = np.array([0.707, 5.83, 151])  # Prandtl-Zahl für Luft, Wasser, Ethylenglykol bei 300K
 stoffe = ['Luft', 'Wasser', 'Ethylenglykol']  # Die dazugehörigen Stoffe
 
 # Ausgabe plotten
 plt.style.use('ggplot')
-plt.figure()
+fig, axs = plt.subplots(1, 3)
 
 # Berechnung der Nusselt-Zahl für jeden Stoff
-for pr_value, stoff in zip(Prandtl_values, stoffe):
+for i, pr_value  in enumerate(Prandtl_values):
     Nu_a = nusselt_a(re_array, pr_value)
     Nu_b = nusselt_b(re_array, pr_value)
-    plt.plot(re_array, Nu_a, label=f'{stoff} (Pr = {pr_value})')
 
-plt.xlabel('Reynolds-Zahl')
-plt.ylabel('Nusselt-Zahl')
-plt.legend(title='Stoffe', loc='upper left')
+    axs[i].plot(re_array, Nu_a, label=f'Nusselt a (Pr={pr_value})')
+    axs[i].plot(re_array, Nu_b, label=f'Nusselt b (Pr={pr_value})')
+
+    axs[i].set_xlabel('Reynolds-Zahl')
+    axs[i].set_ylabel('Nusselt-Zahl')
+    axs[i].set_title(f'{stoffe[i]}')
+    axs[i].legend(loc='upper left')
+
+plt.subplots_adjust(wspace=1)
 plt.show()
