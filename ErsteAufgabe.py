@@ -9,10 +9,11 @@ import matplotlib.pyplot as plt
 
 
 # Funktionen ------------------------------------------
-def nusselt_a(re, pr, n=1):
+def nusselt_a(re, pr, n=0.4):
     """
     Funktion berechnet die Nusselt-Zahl nach a
     Bedingungen: turbulent, 0.6≤pr≤160, re≥10000
+    Heizen: n = 0.3, Kühlen: n = 0.4
     -----
     :param re: Reynoldszahl
     :param pr: Prandtl-Zahl
