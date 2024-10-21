@@ -4,6 +4,7 @@ Mittwoch, 15.10.24
 --------------------------------
 Aufgabe 2 - Temperaturverlauf Rippe
 1/2) freie Konvektion/adiabat, einer Rippe(rechteckig)
+3) Variation der Geometrie
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,13 +14,15 @@ import matplotlib.pyplot as plt
 def temperaturverlauf_rippe(material, alpha, t_b, t_u, l1, u, a, adiabat=False):
     """
     Berechnet den Temperaturverlauf einer Rippe mit den Parametern:
-    material = Welches Material
-    alpha: Wärmeübergangskoeffizient (W/m²K)
-    t_b: Temperatur der Grundfläche (K)
-    t_u: Temperatur der Umgebung
-    l1: Höhe der Rippe
-    u: Umfang der Rippe (m)
-    a: Fläche der Rippe (m²)
+    -----
+    :param material: Welches Material/Stoffwerte
+    :param alpha: Wärmeübergangskoeffizient (W/m²K)
+    :param t_b: Temperatur der Grundfläche (K)
+    :param t_u: Temperatur der Umgebung
+    :param l1: Höhe der Rippe
+    :param u: Umfang der Rippe (m)
+    :param a: Fläche der Rippe (m²)
+    :return x,t: Temperaturverlauf
     """
     # Prüfen, ob das Material existiert
     try:
@@ -49,7 +52,18 @@ def temperaturverlauf_rippe(material, alpha, t_b, t_u, l1, u, a, adiabat=False):
 
 
 def waermestrom_rippe(material, alpha, t_b, t_u, l1, u, a):
-    # Berechnet den Wärmestrom an einer Rippe
+    """
+    Berechnet den Wärmestrom an einer Rippe
+    -----
+    :param material: Welches Material/Stoffwerte
+    :param alpha: Wärmeübergangskoeffizient (W/m²K)
+    :param t_b: Temperatur der Grundfläche (K)
+    :param t_u: Temperatur der Umgebung
+    :param l1: Höhe der Rippe
+    :param u: Umfang der Rippe (m)
+    :param a: Fläche der Rippe (m²)
+    :return q: Wärmestrom
+    """
     # Prüfen, ob das Material existiert
     try:
         lam = stoffwerte[material]["lambda_300"]
@@ -98,10 +112,10 @@ l1 = 0.02  # Länge der Rippe (m)
 b1 = 0.04  # Breite1 der Grundfläche der Rippe (m)
 b2 = 0.002  # Breite2 der Grundfläche der Rippe (m)
 
-u = umfang_rechteck(b1,b2)  # Umfang der Rippe (m)
-a = flaeche_rechteck(b1,b2)  # Fläche der Rippe (m²)
+u = umfang_rechteck(b1, b2)  # Umfang der Rippe (m)
+a = flaeche_rechteck(b1, b2)  # Fläche der Rippe (m²)
 
-# Teilaufgabe 1 und 2 --------------------
+# Teilaufgabe 1 und 2 ---------------------------------------------------------------------------
 """Hier könnte zur optimierung eine for-schleife sein"""
 # Temperaturverlauf für Aluminium mit freier Konvektion an der Spitze
 x_al, T_al = temperaturverlauf_rippe("aluminium", alpha, t_b, t_u, l1, u, a)
@@ -127,7 +141,7 @@ plt.grid(True)
 plt.legend()
 plt.show()
 
-# Teilaufgabe 3 ------------------------
+# Teilaufgabe 3 ----------------------------------------------------------------------------
 V_total = l1 * b1 * b2  # Gesamtvolumen der Rippe
 
 rippen_array = [1, 2, 3, 4]  # Anzahl der Rippen
@@ -137,6 +151,7 @@ Q_total_hoehe = []
 Q_total_breite = []
 Q_total_dicke = []
 
+# Konstantes Volumen, änderung der Rippenanzahl, wirkungsvoller ob Höhe/Dicke/Breite zu variieren ist
 for rippen in rippen_array:
     # Variation der Höhe (Länge)
     l_n = V_total / (rippen * b1 * b2)
@@ -167,7 +182,7 @@ plt.figure(figsize=(10, 6))
 plt.plot(rippen_array, Q_total_hoehe, linestyle='-', label='Variation der Höhe')
 plt.plot(rippen_array, Q_total_breite, linestyle='--', label='Variation der Breite')
 plt.plot(rippen_array, Q_total_dicke, linestyle='-.', label='Variation der Dicke')
-plt.xlabel('Anzahl der Rippen (N)')
+plt.xlabel('Anzahl der Rippen')
 plt.ylabel('Gesamtwärmestrom Q (W)')
 plt.title('Gesamtwärmestrom in Abhängigkeit von der Anzahl der Rippen')
 plt.grid(True)
