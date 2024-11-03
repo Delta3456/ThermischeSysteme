@@ -6,7 +6,7 @@ Aufgabe 4 - Datenanpassung
 Teilaufgabe 1 - Funktion aus Daten
 Teilaufgabe 2 - Parameter speichern
 Teilaufgabe 3 - Berechnungen
-Teilaufgabe 4 - Maximal abgeführte Wärme
+Teilaufgabe 4 - maximal abgeführte Wärme
 """
 import numpy as np
 import pandas as pd
@@ -15,16 +15,16 @@ from scipy.optimize import curve_fit
 
 # Gegebene Daten (Abgelesen aus Datenblatt)
 volume_flow_data = np.array([305, 250, 200, 150, 100, 90]) / 3600  # m³/h zu m³/s
-pressure_diff_data = np.array([0, 75, 170, 250, 330, 340]) * 100  # mbar zu Pa
-power_input_data = np.array([0.5, 1.2, 2.15, 2.85, 3.7, 3.75])  # kW
+pressure_diff_data = np.array([0, 75, 170, 250, 330, 340]) * 100  # mBar zu Pa
+power_input_data = np.array([0.5, 1.2, 2.15, 2.85, 3.7, 3.75]) * 1000  # kW in W
 temperature_increase_data = np.array([3, 8, 20, 42, 77, 83])  # °C
 
 # Funktionen ---------------------------------------------------------------------------------
 # Quadratische Funktion
 def quadratic(x, a, b, c):
-    return a * x**2 + b * x + c
+    return a * x ** 2 + b * x + c
 
-# Funktionen zur späteren Nutzung
+# Anpassungsfunktionen zur späteren Nutzung
 def pressure_difference(v):
     return quadratic(v, *params_pressure)
 
@@ -40,8 +40,13 @@ def temperature_increase(v):
 params_pressure, _ = curve_fit(quadratic, volume_flow_data, pressure_diff_data)
 params_power, _ = curve_fit(quadratic, volume_flow_data, power_input_data)
 params_temp, _ = curve_fit(quadratic, volume_flow_data, temperature_increase_data)
+params_volume, _ = curve_fit(quadratic, pressure_diff_data, volume_flow_data)  # Neue Anpassung für Volumenstrom
 
-# Aufgabe 2) Parameter speichern -------------------------------
+# Volumenstrom als Funktion der Druckdifferenz
+def volume_flow(dP):
+    return quadratic(dP, *params_volume)
+
+# Aufgabe 2) Parameter speichern ----------------------------------------
 parameter_data = {
     'Parameter': ['a', 'b', 'c'],
     'Druckdifferenz': params_pressure,
@@ -51,14 +56,14 @@ parameter_data = {
 parameter_df = pd.DataFrame(parameter_data)  # Erstellen eines DataFrames vom Dictionary
 output_file = "parameter_speicherung.xlsx"
 try:
-    parameter_df.to_excel(output_file, index=False)  # DataFrame als Excel speichern und nur Daten speicerhn
+    parameter_df.to_excel(output_file, index=False)  # DataFrame als Excel speichern und nur Daten speichern
     print(f"Parameter wurden in '{output_file}' gespeichert.")
 except PermissionError:
     print(f"Fehler: Keine Berechtigung zum Speichern der Datei '{output_file}'")
 except Exception as e:
     print(f"Fehler beim Speichern der Datei '{output_file}': {e}")
 
-# Plotten der angepassten Funktionen (Aufgabe 1,2)) ------------------------------------------
+# Plotten der angepassten Funktionen (Aufgabe 1,2)) ---------------------------------------------------------
 volume_flows = np.linspace(min(volume_flow_data), max(volume_flow_data), 100)
 temperature_increases = [temperature_increase(v) for v in volume_flows]
 
@@ -76,8 +81,8 @@ plt.title("Druckdifferenz als Funktion des Volumenstroms")
 
 # Plot der Leistungsaufnahme
 plt.subplot(2, 2, 2)
-plt.plot(volume_flow_data, power_input_data, 'o', label="Daten")
-plt.plot(volume_flows, power_input(volume_flows), '-', label="Anpassung")
+plt.plot(volume_flow_data, power_input_data / 1000, 'o', label="Daten")
+plt.plot(volume_flows, power_input(volume_flows) / 1000, '-', label="Anpassung")
 plt.xlabel("Volumenstrom (m³/s)")
 plt.ylabel("Leistungsaufnahme (kW)")
 plt.legend()
@@ -93,6 +98,75 @@ plt.ylabel("Temperaturanstieg (°C)")
 plt.legend()
 plt.grid()
 plt.title("Temperaturanstieg als Funktion des Volumenstroms")
+
+plt.tight_layout()
+plt.show()
+
+# Aufgabe 3 und 4 ----------------------------------------------------------------------------------
+k = 1.4  # Adiabatenexponent für Luft
+T_u = 293.15  # Umgebungstemperatur in Kelvin (20°C)
+
+# Funktionen für die Aufgabe 3,4 -------------------------------------------
+def isentropic_power(dP):
+    V_dot = volume_flow(dP)
+    return V_dot * dP * (k / (k - 1)) * (T_u / T_u)
+
+def efficiency(dP):
+    P_isentropic = isentropic_power(dP)
+    P_actual = power_input(dP)
+    return P_isentropic / P_actual if P_actual != 0 else 0
+
+def losses(dP):
+    P_isentropic = isentropic_power(dP)
+    P_actual = power_input(dP)
+    return P_actual - P_isentropic if P_actual > P_isentropic else 0
+
+# Druckdifferenzbereich für die Analyse
+pressure_diffs = np.linspace(min(pressure_diff_data), max(pressure_diff_data), 100)
+
+# Berechnung der Werte für den Druckdifferenzbereich
+isentropic_powers = [isentropic_power(dP) for dP in pressure_diffs]
+efficiencies = [efficiency(dP) for dP in pressure_diffs]
+losses_values = [losses(dP) for dP in pressure_diffs]
+
+# Maximale Wärmeableitung als höchste Verlustleistung
+max_heat_rejection = max(losses_values)
+
+# Ausgabe der maximalen abgeführten Wärme
+print(f"Maximal abzuführende Wärmeleistung (W): {max_heat_rejection}")
+
+# Plot der Ergebnisse für Aufgabe 3 und 4
+plt.figure(figsize=(12, 8))
+
+# Plot der isentropen Leistung als Funktion der Druckdifferenz
+plt.subplot(2, 2, 1)
+plt.plot(pressure_diffs / 100, np.array(isentropic_powers) / 1000, label="Isentrope Leistung")
+plt.xlabel("Druckdifferenz (mbar)")
+plt.ylabel("Isentrope Leistung (kW)")
+plt.legend()
+plt.title("Isentrope Leistung als Funktion der Druckdifferenz")
+
+# Plot des isentropen Wirkungsgrades als Funktion der Druckdifferenz
+plt.subplot(2, 2, 2)
+plt.plot(pressure_diffs / 100, efficiencies, label="Isentroper Wirkungsgrad")
+plt.xlabel("Druckdifferenz (mbar)")
+plt.ylabel("Isentroper Wirkungsgrad")
+plt.legend()
+plt.title("Isentroper Wirkungsgrad als Funktion der Druckdifferenz")
+
+# Plot der Verluste als Funktion der Druckdifferenz
+plt.subplot(2, 2, 3)
+plt.plot(pressure_diffs / 100, np.array(losses_values) / 1000, label="Verluste")
+plt.xlabel("Druckdifferenz (mbar)")
+plt.ylabel("Verluste (kW)")
+plt.legend()
+plt.title("Verluste als Funktion der Druckdifferenz")
+
+# Darstellung der maximalen Wärmeableitung
+plt.subplot(2, 2, 4)
+plt.bar(["Maximale Wärmeableitung"], [max_heat_rejection / 1000], color="orange")
+plt.ylabel("Maximale Wärmeableitung (kW)")
+plt.title("Maximal abgeführte Wärme")
 
 plt.tight_layout()
 plt.show()
