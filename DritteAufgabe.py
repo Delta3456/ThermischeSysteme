@@ -33,7 +33,7 @@ def berechne_t_te(epsilon):
         print(f"Fehler!")
         return None
 
-
+def w
 # Teilaufgabe 1 --------------------------------------------------------------------
 # Parameter
 T_f = 1300  # Flammentemperatur in K
