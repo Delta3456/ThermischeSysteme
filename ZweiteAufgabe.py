@@ -22,7 +22,7 @@ def temperaturverlauf_rippe(material, alpha, t_b, t_u, l1, u, a, adiabat=False):
     :param l1: Höhe der Rippe
     :param u: Umfang der Rippe (m)
     :param a: Fläche der Rippe (m²)
-    :return x,t: Temperaturverlauf
+    :return x,t_te: Temperaturverlauf
     """
     # Prüfen, ob das Material existiert
     try:
