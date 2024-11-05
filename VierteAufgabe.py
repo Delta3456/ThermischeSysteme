@@ -100,6 +100,7 @@ plt.show()
 k = 1.4  # Isentropenexponent für Luft
 
 # Funktionen für die Aufgabe 3,4 -------------------------------------------
+# Bei kleinen Druckänerungen kann diese Formel genutzt werden:
 def isentropic_power(v):
     dP = pressure_difference(v)
     return v * dP * (k / (k - 1))
