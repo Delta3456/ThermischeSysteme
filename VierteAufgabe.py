@@ -98,7 +98,7 @@ plt.tight_layout()
 plt.show()
 
 # Aufgabe 3 und 4 ----------------------------------------------------------------------------------
-k = 1.4  # Adiabatenexponent für Luft
+k = 1.4  # Isentropenexponent für Luft
 T_u = 293.15  # Umgebungstemperatur in Kelvin (20°C)
 
 # Funktionen für die Aufgabe 3,4 -------------------------------------------
