@@ -24,7 +24,6 @@ temperature_increase_data = np.array([3, 8, 20, 42, 77, 83])  # °C
 def quadratic(x, a, b, c):
     return a * x ** 2 + b * x + c
 
-# Anpassungsfunktionen zur späteren Nutzung
 def pressure_difference(v):
     return quadratic(v, *params_pressure)
 
@@ -99,7 +98,6 @@ plt.show()
 
 # Aufgabe 3 und 4 ----------------------------------------------------------------------------------
 k = 1.4  # Isentropenexponent für Luft
-T_u = 293.15  # Umgebungstemperatur in Kelvin (20°C)
 
 # Funktionen für die Aufgabe 3,4 -------------------------------------------
 def isentropic_power(v):
@@ -110,7 +108,7 @@ def isentropic_power(v):
 def efficiency(v):
     P_isentropic = isentropic_power(v)
     P_actual = power_input(v)
-    return P_isentropic / P_actual if P_actual != 0 else 0
+    return P_isentropic / P_actual if P_actual > P_isentropic else 0
 
 # Berechnung der Verluste
 def losses(v):
@@ -132,7 +130,7 @@ print(f"Maximal abzuführende Wärmeleistung (W): {max_heat_rejection}")
 # Plot der Ergebnisse für Aufgabe 3 und 4
 plt.figure(figsize=(12, 8))
 
-# Plot der isentropen Leistung als Funktion der Druckdifferenz
+# Plot der isentropen Leistung
 plt.subplot(2, 2, 1)
 plt.plot(volume_flows, np.array(isentropic_powers), label="Isentrope Leistung")
 plt.xlabel("Volumenstrom (m³/s)")
@@ -140,7 +138,7 @@ plt.ylabel("Isentrope Leistung (W)")
 plt.legend()
 plt.title("Isentrope Leistung als Funktion der Druckdifferenz")
 
-# Plot des isentropen Wirkungsgrades als Funktion der Druckdifferenz
+# Plot des isentropen Wirkungsgrades
 plt.subplot(2, 2, 2)
 plt.plot(volume_flows, efficiencies, label="Isentroper Wirkungsgrad")
 plt.xlabel("Volumenstrom (m³/s)")
@@ -148,7 +146,7 @@ plt.ylabel("Isentroper Wirkungsgrad")
 plt.legend()
 plt.title("Isentroper Wirkungsgrad als Funktion der Druckdifferenz")
 
-# Plot der Verluste als Funktion der Druckdifferenz
+# Plot der Verluste
 plt.subplot(2, 2, 3)
 plt.plot(volume_flows, np.array(losses_values), label="Verluste")
 plt.xlabel("Volumenstrom (m³/s)")
