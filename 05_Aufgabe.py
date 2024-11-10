@@ -12,21 +12,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import root
 
-# Laden der Parameter aus der Excel-Datei
-file_path = "04_parameter_speicherung.xlsx"
-parameters_df = pd.read_excel(file_path)
-
-# Parameter für Druckdifferenz aus der Excel-Datei extrahieren
-a, b, c = parameters_df["Druckdifferenz"]
-
-# Konstante Werte und gegebene Parameter
+# Werte und Parameter
 rho = 1.2041  # Luftdichte bei 20 °C in kg/m³
 nu = 15.32e-6  # Kinematische Viskosität für Luft in m²/s
 eta = 18.22e-6  # Dynamische Viskosität für Luft in kg/ms
 L_rohr = np.linspace(1, 400, 100)  # Rohrlänge von 1 bis 400 Metern
+diameters = [0.05, 0.1, 0.25, 0.5]  # Rohrdurchmesser in Metern
 
 
-# Funktion für die Druckdifferenz aus Volumenstrom (basierend auf quadratischer Funktion, aus Aufgabe 04)
+# Funktionen ---------------------------------------------------------------------------
+# Funktion für die Druckdifferenz vom Verdichter (quadratischer Funktion, aus Aufgabe 04)
 def pressure_difference(v_dot):
     return a * v_dot ** 2 + b * v_dot + c
 
@@ -41,25 +36,19 @@ def darcy_friction_factor(Re):
         return 0.079 * Re ** -0.25
 
 
-# Rohrdurchmesser in Metern
-diameters = [0.05, 0.1, 0.25, 0.5]
-
-# Listen zur Speicherung der Ergebnisse
-volume_flows_over_length = []
-power_over_length = []
-
-
-# Funktion zur Berechnung des Volumenstroms für gegebenen Durchmesser und Länge
-def compute_volume_flow(D, L):
-    A = np.pi * (D / 2) ** 2  # Querschnittsfläche
+# Funktion zur Berechnung des Volumenstroms
+def berechne_volume_flow(D, L):
+    A = np.pi * (D / 2) ** 2  # Querschnittsfläche des Rohrs
     Dh = (4 * A) / (2 * np.pi * (D / 2))  # Hydraulischer Durchmesser
 
-    # Funktion, die die Differenz zwischen Druckdifferenz und Druckverlust zurückgibt
+    # Hilfsfunktion, im System gilt: delta_p_rohr + delta_p_verdichter = 0
+    # (-dp_rohr/dx)=(f*2G^2)/(rho*Dh) und -dp_rohr = C*L_rohr
+    # mit G=m_dot/A = rho*u
     def equation(v_dot):
         u = v_dot / A
         Re = Dh * u / nu
         f = darcy_friction_factor(Re)
-        delta_p_rohr = f * (L / Dh) * (rho * u ** 2) / 2
+        delta_p_rohr = L * (f * rho * u ** 2) / (2 * Dh)
         return pressure_difference(v_dot) - delta_p_rohr
 
     # Startwert für die Volumenstromsuche
@@ -73,6 +62,25 @@ def compute_volume_flow(D, L):
         return np.nan  # Keine Lösung gefunden
 
 
+# Berechnung und plotten ---------------------------------------------------------------------------
+# Laden der Parameter aus der Excel-Datei
+file_path = "04_parameter_speicherung.xlsx"
+try:
+    # Versuch, die Excel-Datei zu laden
+    parameters_df = pd.read_excel(file_path)
+    a, b, c = parameters_df["Druckdifferenz"]  # Parameter für Druckdifferenz aus der Excel-Datei extrahieren
+    print("Excel-Datei wurde erfolgreich geladen.")
+except FileNotFoundError:
+    # Dieser Block wird ausgeführt, wenn die Datei nicht existiert
+    print(f"Die Datei '{file_path}' existiert nicht.")
+except Exception as e:
+    # Allgemeiner Fehlerfall für andere Fehler
+    print(f"Ein Fehler ist aufgetreten: {e}")
+
+# Listen zur Speicherung der Ergebnisse
+volume_flows_over_length = []
+power_over_length = []
+
 # Berechnungen für jeden Rohrdurchmesser
 for D in diameters:
     volume_flow_for_length = []
@@ -80,7 +88,7 @@ for D in diameters:
 
     # Berechnung für jede Rohrlänge
     for L in L_rohr:
-        volume_flow = compute_volume_flow(D, L)
+        volume_flow = berechne_volume_flow(D, L)
         volume_flow_for_length.append(volume_flow)
 
         # Berechnung der Leistung, wenn ein Volumenstrom gefunden wurde
@@ -99,16 +107,16 @@ fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12))
 
 # Volumenstrom-Diagramm
 for i, D in enumerate(diameters):
-    ax1.plot(L_rohr, volume_flows_over_length[i], label=f'D = {D * 100:.0f} cm')
+    ax1.plot(L_rohr, volume_flows_over_length[i], label=f'D = {D} m')
 ax1.set_xlabel('Rohrlänge (m)')
 ax1.set_ylabel('Erreichbarer Volumenstrom (m³/s)')
 ax1.set_title('Erreichbarer Volumenstrom über Rohrlänge für verschiedene Rohrdurchmesser')
 ax1.legend()
 ax1.grid()
 
-# Leistung-Diagramm
+# Leistungs-Diagramm
 for i, D in enumerate(diameters):
-    ax2.plot(L_rohr, power_over_length[i], label=f'D = {D * 100:.0f} cm')
+    ax2.plot(L_rohr, power_over_length[i], label=f'D = {D} m')
 ax2.set_xlabel('Rohrlänge (m)')
 ax2.set_ylabel('Benötigte Leistung (W)')
 ax2.set_title('Benötigte Leistung über Rohrlänge für verschiedene Rohrdurchmesser')
