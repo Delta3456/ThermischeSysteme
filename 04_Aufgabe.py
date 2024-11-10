@@ -7,6 +7,12 @@ Teilaufgabe 1 - Funktion aus Daten
 Teilaufgabe 2 - Parameter speichern
 Teilaufgabe 3 - Berechnungen
 Teilaufgabe 4 - maximal abgeführte Wärme
+
+Fehler:
+Druck + Umgebung
+Temp + Umgebung
+Fehlt: Cp cv wurde genutzt
+Berechnet Temperatur
 """
 import numpy as np
 import pandas as pd
@@ -48,7 +54,7 @@ parameter_data = {
     'Temperaturanstieg': params_temp
 }
 parameter_df = pd.DataFrame(parameter_data)  # Erstellen eines DataFrames vom Dictionary
-output_file = "parameter_speicherung.xlsx"
+output_file = "04_parameter_speicherung.xlsx"
 try:
     parameter_df.to_excel(output_file, index=False)  # DataFrame als Excel speichern und nur Daten speichern
     print(f"Parameter wurden in '{output_file}' gespeichert.")
