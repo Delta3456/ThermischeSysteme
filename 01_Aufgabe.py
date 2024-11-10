@@ -69,10 +69,10 @@ def re_rohr(u, d, v):
     Variablen:
     - u: Geschwindigkeit [m/s]
     - d: Durchmesser [m]
-    - v: Kinematische Viskosität [m²/s]
+    - v_dot: Kinematische Viskosität [m²/s]
     - re: Reynolds-Zahl [-]
     Formel:
-    - re = (u∗d)/v
+    - re = (u∗d)/v_dot
     """
     re = (u * d) / v
     return re
