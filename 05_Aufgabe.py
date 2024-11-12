@@ -103,7 +103,7 @@ for D in diameters:
     power_over_length.append(power_for_length)
 
 # Plotten der Diagramme als Subplots
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12))
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5, 6))
 
 # Volumenstrom-Diagramm
 for i, D in enumerate(diameters):
