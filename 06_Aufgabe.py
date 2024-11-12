@@ -48,3 +48,39 @@ def dT_w_dt(t, T_w, T_h):
 def system(t, y, P):
     T_h, T_w = y
     return [dT_h_dt(t, T_h, T_w, P), dT_w_dt(t, T_w, T_h)]
+
+
+# Werte für die Berechnung
+T_h0 = 298  # Anfangstemperatur des Heizelements
+T_w0 = 298  # Anfangstemperatur des Wassers
+y0 = [T_h0, T_w0]
+t_span = (0, 500)  # Zeitspanne
+t_eval = np.linspace(0, 500, 100)  # 100 Punkte Berechnen
+powers = [1000, 2000]  # Leistungen für das Heizelement
+solutions = {}
+
+for P in powers:
+    # Lösen der DGLs für jede Leistung
+    solution = solve_ivp(system, t_span, y0, args=(P,), t_eval=t_eval)
+    solutions[P] = solution
+
+# Plotten der Temperaturentwicklung für beide Leistungen
+plt.figure(figsize=(12, 8))
+
+for P, solution in solutions.items():
+    zeit = solution.t
+    T_h_loesung = solution.y[0]
+    T_w_loesung = solution.y[1]
+    plt.plot(zeit, T_h_loesung, label=f"Temperatur des Heizelements (T_h) bei {P/1000} kW", linestyle="-")
+    plt.plot(zeit, T_w_loesung, label=f"Temperatur des Wassers (T_w) bei {P/1000} kW", linestyle="--")
+
+# Siedetemperatur von Wasser hinzufügen
+plt.axhline(373, color="red", linestyle=":", label="Siedetemperatur von Wasser (100°C)")
+
+# Beschriftung
+plt.xlabel("Zeit (Sekunden)")
+plt.ylabel("Temperatur (K)")
+plt.title("Temperaturentwicklung von Heizelement und Wasser über die Zeit bei verschiedenen Leistungen")
+plt.legend()
+plt.grid(True)
+plt.show()
