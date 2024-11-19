@@ -61,7 +61,8 @@ solutions = {}
 
 for P in powers:
     # Lösen der DGLs für jede Leistung
-    solution = solve_ivp(system, t_span, y0, args=(P,), t_eval=t_eval)
+    # methode geändert, weil Runge-Kutta "wellen" verursacht hat
+    solution = solve_ivp(system, t_span, y0, args=(P,), t_eval=t_eval, method='LSODA')
     solutions[P] = solution
 
 # Plotten der Temperaturentwicklung für beide Leistungen
