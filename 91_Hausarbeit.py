@@ -150,14 +150,16 @@ def berechne_nu_rohr(Re, Pr):
     return 0.023 * Re ** 0.8 * Pr ** 0.4
 
 def berechne_nu_ab(Re, Pr):
-    """Berechnet die Nusselt-Zahl für Strömung (Gnielinski-Gleichung)."""
-    if Re < 2300:
-        Nu = 3.66  # Laminare Strömung
-    elif Re <= 5e6:
-        f = (0.79 * np.log(Re) - 1.64) ** -2
-        Nu = (f / 8) * (Re - 1000) * Pr / (1 + 12.7 * (f / 8) ** 0.5 * (Pr ** (2/3) - 1))
+    """Berechnet die Nusselt-Zahl für externe Querstromströmung um ein Rohr (Hilpert-Korrelation)."""
+    if 40 < Re <= 4000:
+        C, m, n = 0.683, 0.466, 0.37
+    elif 4000 < Re <= 40_000:
+        C, m, n = 0.193, 0.618, 0.37
+    elif 40_000 < Re <= 400_000:
+        C, m, n = 0.0266, 0.805, 0.37
     else:
-        Nu = np.nan  # Außerhalb des Gültigkeitsbereichs
+        raise ValueError("Reynolds-Zahl außerhalb des gültigen Bereichs für die Hilpert-Korrelation.")
+    Nu = C * Re**m * Pr**n
     return Nu
 
 
@@ -242,8 +244,8 @@ for L_r in L_r_Werte:
     plt.plot(subset['D_r'], subset['Q_dot'], label=f'L = {L_r} m')
 
 plt.axhline(y=Q_dot_erf, color='r', linestyle='--', label='Erforderlicher Q̇')
-plt.xlabel('Rohrdurchmesser D (m)')
-plt.ylabel('Wärmestrom Q̇ (W)')
+plt.xlabel('Rohrdurchmesser D_r (m)')
+plt.ylabel('Wärmestrom $\dot{Q}$ (W)')
 plt.title('Einfluss des Rohrdurchmessers auf den Wärmestrom')
 plt.legend()
 plt.grid(True)
@@ -260,8 +262,8 @@ for T_ab in T_ab_Werte:
     plt.plot(subset['u_ab'], subset['Q_dot'], label=f'T_gas = {T_ab:.1f} K')
 
 plt.axhline(y=Q_dot_erf, color='r', linestyle='--', label='Erforderlicher Q̇')
-plt.xlabel('Gasgeschwindigkeit u_gas (m/s)')
-plt.ylabel('Wärmestrom Q̇ (W)')
+plt.xlabel('Rohrdurchmesser D_r (m)')
+plt.ylabel('Wärmestrom $\dot{Q}$ (W)')
 plt.title('Einfluss der Gasgeschwindigkeit auf den Wärmestrom')
 plt.legend()
 plt.grid(True)
