@@ -54,11 +54,11 @@ label_mapping = {
 
 # Faktor um alle Einheiten ohne Probleme nutzen zu können
 units_mapping = {
-    'Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)': 10**3,
-    'Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)': 10**3,
-    'Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)': 10**-3,
-    'Kinematische Viskosität (my, 10⁻⁶ m²/s)': 10**-6,
-    'Kinematische Viskosität (my, 10⁻⁷ m²/s)': 10 **-7,
+    'Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)': 10 ** 3,
+    'Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)': 10 ** 3,
+    'Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)': 10 ** -3,
+    'Kinematische Viskosität (my, 10⁻⁶ m²/s)': 10 ** -6,
+    'Kinematische Viskosität (my, 10⁻⁷ m²/s)': 10 ** -7,
 }
 
 
@@ -95,7 +95,7 @@ def convert_data(data, unit_mapping, label_mapping):
 def interpolate_value(data, x_label, y_label, x_value):
     """
     Interpoliert einen Wert basierend auf gegebenen Daten.
-    Beispiel für Cp von Wasser bei 25°C:
+    Beispiel für Cp von Wasser bei 25 °C:
     cp_25 = interpolate_value(data_wasser_converted, 't','cp', 25)
     """
     x_data = data[x_label]  # Werte der unabhängigen Variablen
@@ -128,6 +128,7 @@ kappa_w_Tm = interpolate_value(data_wasser_converted, 't', 'kappa', T_w_m)
 # Erforderlicher Wärmestrom der nötig ist um das Wasser aufzuwärmen
 # Annahme, dass die bei flüssigem Wasser sich nicht stark ändert, daher wird der Mittelwert genutzt
 Q_dot_erf = m_dot_w * dT_erf * cp_w_Tm  # Watt
+Q_dot_erf = float(Q_dot_erf)
 
 # Werte zum varieren
 # Durchmesser- und Längenbereiche für das Rohr
@@ -149,6 +150,7 @@ def berechne_nu_rohr(Re, Pr):
     """Berechnet die Nusselt-Zahl für turbulente Strömung in Rohren (Dittus-Boelter-Gleichung)."""
     return 0.023 * Re ** 0.8 * Pr ** 0.4
 
+
 def berechne_nu_ab(Re, Pr):
     """Berechnet die Nusselt-Zahl für externe Querstromströmung um ein Rohr (Hilpert-Korrelation)."""
     if 40 < Re <= 4000:
@@ -159,7 +161,7 @@ def berechne_nu_ab(Re, Pr):
         C, m, n = 0.0266, 0.805, 0.37
     else:
         raise ValueError("Reynolds-Zahl außerhalb des gültigen Bereichs für die Hilpert-Korrelation.")
-    Nu = C * Re**m * Pr**n
+    Nu = C * Re ** m * Pr ** n
     return Nu
 
 
@@ -207,17 +209,17 @@ for D_r in D_r_Werte:
                 # Annahme, dass T_ab keine Temperaturänderung erfährt
                 dT_lm = berechne_dT_lm(T_ab, T_ab, T_w_ein, T_w_aus)
 
-                rho_ab = interpolate_value(data_stickstoff_converted, 't','rho', T_ab)
-                my_ab = interpolate_value(data_stickstoff_converted, 't','my', T_ab)
-                Re_ab = berechne_re(rho_ab, u_ab, D_r,my_ab)
-                Pr_ab = interpolate_value(data_stickstoff_converted, 't','pr', T_ab)
+                rho_ab = interpolate_value(data_stickstoff_converted, 't', 'rho', T_ab)
+                my_ab = interpolate_value(data_stickstoff_converted, 't', 'my', T_ab)
+                Re_ab = berechne_re(rho_ab, u_ab, D_r, my_ab)
+                Pr_ab = interpolate_value(data_stickstoff_converted, 't', 'pr', T_ab)
                 Nu_ab = berechne_nu_ab(Re_ab, Pr_ab)
-                kappa_ab = interpolate_value(data_stickstoff_converted, 't','kappa', T_ab)
+                kappa_ab = interpolate_value(data_stickstoff_converted, 't', 'kappa', T_ab)
                 alpha_ab = berechne_waermeuebergangsko(Nu_ab, kappa_ab, D_r)
                 alpha_ges = berechne_waermeuebergangsko_ges(alpha_w, alpha_ab)
                 Q_dot = berechne_waermestrom(alpha_ges, A_wu, dT_lm)
 
-                #print(f"D_r: {D_r}, L_r: {L_r}, u_ab: {u_ab}, T_ab: {T_ab}, dt_lmP: {dT_lm}: Q_dot: {Q_dot}")
+                # print(f"D_r: {D_r}, L_r: {L_r}, u_ab: {u_ab}, T_ab: {T_ab}, dt_lmP: {dT_lm}: Q_dot: {Q_dot}")
                 # Ergebnisse speichern
                 ergebnisse.append({
                     'D_r': D_r,
@@ -227,7 +229,7 @@ for D_r in D_r_Werte:
                     'Q_dot': Q_dot,
                     'Erfuellt Anforderung': Q_dot >= Q_dot_erf
                 })
-                #print(ergebnisse)
+                # print(ergebnisse)
 
 # Ergebnisse in ein DataFrame konvertieren
 df = pd.DataFrame(ergebnisse)
@@ -243,7 +245,7 @@ for L_r in L_r_Werte:
         ]
     plt.plot(subset['D_r'], subset['Q_dot'], label=f'L = {L_r} m')
 
-plt.axhline(y=Q_dot_erf, color='r', linestyle='--', label='Erforderlicher Q̇')
+plt.axhline(y=Q_dot_erf, color='r', linestyle='--', label='Erforderlicher $\dot{Q}$')
 plt.xlabel('Rohrdurchmesser D_r (m)')
 plt.ylabel('Wärmestrom $\dot{Q}$ (W)')
 plt.title('Einfluss des Rohrdurchmessers auf den Wärmestrom')
@@ -261,7 +263,7 @@ for T_ab in T_ab_Werte:
         ]
     plt.plot(subset['u_ab'], subset['Q_dot'], label=f'T_gas = {T_ab:.1f} K')
 
-plt.axhline(y=Q_dot_erf, color='r', linestyle='--', label='Erforderlicher Q̇')
+plt.axhline(y=Q_dot_erf, color='r', linestyle='--', label='Erforderlicher $\dot{Q}$')
 plt.xlabel('Rohrdurchmesser D_r (m)')
 plt.ylabel('Wärmestrom $\dot{Q}$ (W)')
 plt.title('Einfluss der Gasgeschwindigkeit auf den Wärmestrom')
