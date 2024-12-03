@@ -17,7 +17,7 @@ data_wasser = {
     "Spezifische Entropie (s, 10³ J/kg·K)": [0.22446, 0.49155],
     "Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)": [4.189, 4.179],
     "Isobarer Volumen-Ausdehnungskoeffizient (αv, 10⁻³ K⁻¹)": [0.1509, 0.3371],
-    "Wärmeleitfähigkeit (lambda, 10⁻³ W/m·K)": [588.8, 620.29],
+    "Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)": [588.8, 620.29],
     "Dynamische Viskosität (eta, 10⁻⁶ Pa·s)": [1137.6, 733.73],
     "Kinematische Viskosität (my, 10⁻⁶ m²/s)": [1.139, 0.7379],
     "Temperaturleitfähigkeit (a, 10⁻⁶ m²/s)": [0.1407, 0.1493],
@@ -33,7 +33,7 @@ data_stickstoff = {
     "Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)": [1.06, 1.07, 1.08, 1.092, 1.104, 1.116],
     "Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)": [0.763, 0.772, 0.783, 0.795, 0.807, 0.819],
     "Schallgeschwindigkeit (ws, m/s)": [464.7, 485.5, 505.3, 524.1, 542.1, 559.4],
-    "Wärmeleitfähigkeit (lambda, 10⁻³ W/m·K)": [40.42, 43.32, 46.13, 48.87, 51.53, 54.14],
+    "Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)": [40.42, 43.32, 46.13, 48.87, 51.53, 54.14],
     "Dynamische Viskosität (eta, 10⁻⁶ Pa·s)": [26.9, 28.66, 30.35, 31.98, 33.56, 35.08],
     "Kinematische Viskosität (my, 10⁻⁷ m²/s)": [417.9, 487.8, 561.6, 639.2, 720.5, 805.4],
     "Temperaturleitfähigkeit (a, 10⁻⁷ m²/s)": [592.2, 689.3, 790.2, 894.7, 1002.6, 1113.8],
@@ -46,7 +46,7 @@ label_mapping = {
     'Dichte (rho, kg/m³)': 'rho',
     'Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)': 'cp',
     'Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)': 'cv',
-    'Wärmeleitfähigkeit (lambda, 10⁻³ W/m·K)': 'lambda',
+    'Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)': 'kappa',
     'Prandtl-Zahl (Pr)': 'pr',
 }
 
@@ -54,7 +54,7 @@ label_mapping = {
 units_mapping = {
     'Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)': 10**3,
     'Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)': 10**3,
-    'Wärmeleitfähigkeit (lambda, 10⁻³ W/m·K)': 10**-3,
+    'Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)': 10**-3,
 }
 
 
@@ -132,11 +132,36 @@ T_ab_Werte = np.linspace(250 + 273.15, 500 + 273.15, 6)  # K
 
 
 # Thermodynamische Funktionen -----------------------------------------------------------
-def berechne_reynoldszahl(rho, u, D, mu):
+def berechne_re(rho, u, D, mu):
     """Berechnet die Reynolds-Zahl."""
     return (rho * u * D) / mu
 
 
-def berechne_nusseltzahl_rohr(Re, Pr):
+def berechne_nu_rohr(Re, Pr):
     """Berechnet die Nusselt-Zahl für turbulente Strömung in Rohren (Dittus-Boelter-Gleichung)."""
     return 0.023 * Re ** 0.8 * Pr ** 0.4
+
+
+def berechne_waermeuebergangsko(Nu, kappa, D):
+    """Berechnet den Wärmeübergangskoeffizienten."""
+    return Nu * kappa / D
+
+
+def berechne_dT_lm(T_hot_in, T_hot_out, T_cold_in, T_cold_out):
+    """Berechnet die logarithmische mittlere Temperaturdifferenz."""
+    delta_T1 = T_hot_in - T_cold_out
+    delta_T2 = T_hot_out - T_cold_in
+    if delta_T1 == delta_T2:
+        return delta_T1  # Vermeidung von Division durch Null
+    else:
+        return (delta_T1 - delta_T2) / np.log(delta_T1 / delta_T2)
+
+
+def berechne_waermeuebergangsko_ges(alpha_i, alpha_o):
+    """Berechnet den Gesamtwärmeübergangskoeffizienten U."""
+    return 1 / (1 / alpha_i + 1 / alpha_o)
+
+
+def berechne_waermestrom(alpha_ges, A, dT_lm):
+    """Berechnet den Wärmestrom Q_dot."""
+    return alpha_ges * A * dT_lm
