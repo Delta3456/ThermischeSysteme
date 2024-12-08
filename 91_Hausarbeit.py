@@ -8,10 +8,11 @@ Erste Hausarbeit - Analyse der Wärmeübertragung in einem Rohr
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import math
 
-# Stoffwerte Wasser bei p=1bar aus VDI Wärmeatlas
+# Stoffwerte Wasser bei p=1bar aus VDI Wärmeatlas(Kapitel C2.1)
 data_wasser = {
-    "Temperatur (t, °C)": [15, 35],
+    "Temperatur (t, °C)": [15, 34],
     "Dichte (rho, kg/m³)": [999.1, 994.38],
     "Spezifische Enthalpie (h, 10³ J/kg)": [63.078, 142.55],
     "Spezifische Entropie (s, 10³ J/kg·K)": [0.22446, 0.49155],
@@ -19,12 +20,12 @@ data_wasser = {
     "Isobarer Volumen-Ausdehnungskoeffizient (αv, 10⁻³ K⁻¹)": [0.1509, 0.3371],
     "Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)": [588.8, 620.29],
     "Dynamische Viskosität (eta, 10⁻⁶ Pa·s)": [1137.6, 733.73],
-    "Kinematische Viskosität (my, 10⁻⁶ m²/s)": [1.139, 0.7379],
+    "Kinematische Viskosität (ny, 10⁻⁶ m²/s)": [1.139, 0.7379],
     "Temperaturleitfähigkeit (a, 10⁻⁶ m²/s)": [0.1407, 0.1493],
     "Prandtl-Zahl (Pr)": [8.093, 4.943],
 }
 
-# Stoffwerte Stickstoff p=1bar aus VDI Wärmeatlas
+# Stoffwerte Stickstoff p=1bar aus VDI Wärmeatlas(Kapitel C2.3)
 data_stickstoff = {
     "Temperatur (t, °C)": [250, 300, 350, 400, 450, 500],
     "Dichte (rho, kg/m³)": [0.64376, 0.5876, 0.54045, 0.50031, 0.46572, 0.43561],
@@ -35,7 +36,7 @@ data_stickstoff = {
     "Schallgeschwindigkeit (ws, m/s)": [464.7, 485.5, 505.3, 524.1, 542.1, 559.4],
     "Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)": [40.42, 43.32, 46.13, 48.87, 51.53, 54.14],
     "Dynamische Viskosität (eta, 10⁻⁶ Pa·s)": [26.9, 28.66, 30.35, 31.98, 33.56, 35.08],
-    "Kinematische Viskosität (my, 10⁻⁷ m²/s)": [417.9, 487.8, 561.6, 639.2, 720.5, 805.4],
+    "Kinematische Viskosität (ny, 10⁻⁷ m²/s)": [417.9, 487.8, 561.6, 639.2, 720.5, 805.4],
     "Temperaturleitfähigkeit (a, 10⁻⁷ m²/s)": [592.2, 689.3, 790.2, 894.7, 1002.6, 1113.8],
     "Prandtl-Zahl (Pr)": [0.7057, 0.7076, 0.7107, 0.7144, 0.7187, 0.7231],
 }
@@ -47,8 +48,8 @@ label_mapping = {
     'Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)': 'cp',
     'Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)': 'cv',
     'Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)': 'kappa',
-    'Kinematische Viskosität (my, 10⁻⁶ m²/s)': 'my',
-    'Kinematische Viskosität (my, 10⁻⁷ m²/s)': 'my',
+    'Kinematische Viskosität (ny, 10⁻⁶ m²/s)': 'ny',
+    'Kinematische Viskosität (ny, 10⁻⁷ m²/s)': 'ny',
     'Prandtl-Zahl (Pr)': 'pr',
 }
 
@@ -57,8 +58,8 @@ units_mapping = {
     'Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)': 10 ** 3,
     'Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)': 10 ** 3,
     'Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)': 10 ** -3,
-    'Kinematische Viskosität (my, 10⁻⁶ m²/s)': 10 ** -6,
-    'Kinematische Viskosität (my, 10⁻⁷ m²/s)': 10 ** -7,
+    'Kinematische Viskosität (ny, 10⁻⁶ m²/s)': 10 ** -6,
+    'Kinematische Viskosität (ny, 10⁻⁷ m²/s)': 10 ** -7,
 }
 
 
@@ -120,9 +121,10 @@ T_w_ein = 15 + 273.15  # K
 T_w_aus = 35 + 273.15  # K
 dT_erf = T_w_aus - T_w_ein  # delta t was erforderlich ist um das Wasser aufzuwärmen
 T_w_m = (T_w_ein + T_w_aus) / 2  # Mittlere Temperatur des Wassers
+# Stoffwerte von Wasser bei mittlerer Temperatur ist notwenig für die Berechnung weiterer Werte z.B. Nusselt nach VDI(G6, S.840)
 cp_w_Tm = interpolate_value(data_wasser_converted, 't', 'cp', T_w_m)
 rho_w_Tm = interpolate_value(data_wasser_converted, 't', 'rho', T_w_m)
-my_w_Tm = interpolate_value(data_wasser_converted, 't', 'my', T_w_m)
+ny_w_Tm = interpolate_value(data_wasser_converted, 't', 'ny', T_w_m)
 Pr_w_Tm = interpolate_value(data_wasser_converted, 't', 'pr', T_w_m)
 kappa_w_Tm = interpolate_value(data_wasser_converted, 't', 'kappa', T_w_m)
 # Erforderlicher Wärmestrom der nötig ist um das Wasser aufzuwärmen
@@ -130,7 +132,7 @@ kappa_w_Tm = interpolate_value(data_wasser_converted, 't', 'kappa', T_w_m)
 Q_dot_erf = m_dot_w * dT_erf * cp_w_Tm  # Watt
 Q_dot_erf = float(Q_dot_erf)
 
-# Werte zum varieren
+# Parameterbereiche
 # Durchmesser- und Längenbereiche für das Rohr
 D_r_Werte = np.linspace(0.02, 0.04, 5)  # Meter
 L_r_Werte = np.linspace(3, 6, 4)  # Meter
@@ -141,28 +143,40 @@ T_ab_Werte = np.linspace(250 + 273.15, 500 + 273.15, 6)  # K
 
 
 # Thermodynamische Funktionen -----------------------------------------------------------
-def berechne_re(rho, u, D, my):
+def berechne_re(u, L, ny):
     """Berechnet die Reynolds-Zahl."""
-    return (rho * u * D) / my
+    return (u * L) / ny
 
 
-def berechne_nu_rohr(Re, Pr):
-    """Berechnet die Nusselt-Zahl für turbulente Strömung in Rohren (Dittus-Boelter-Gleichung)."""
-    return 0.023 * Re ** 0.8 * Pr ** 0.4
+def berechne_nu_rohr(Re, Pr, d_rohr, l_rohr):
+    """
+    Berechnet die Nusselt-Zahl bei voll ausgebildeter turbulenter Strömung(Re > 10 ** 4)
+    nach Gnielinski(VDI-Wärmeatlas, Kaptiel G1, 4.1)
+    """
+    if Re <= 10 ** 4:
+        raise ValueError("Reynolds-Zahl muss > 10 ** 4 sein.")
+    xi = (1.8 * math.log10(Re) - 1.5) ** -2
+    nu_rohr = ((xi / 8) * (Re - 1000) * Pr) / (1 + 12.7 * math.sqrt(xi / 8) * (Pr ** (2 / 3) - 1))
+    nu_rohr *= 1 + (d_rohr / l_rohr) ** (2 / 3)
+    return nu_rohr
 
 
 def berechne_nu_ab(Re, Pr):
-    """Berechnet die Nusselt-Zahl für externe Querstromströmung um ein Rohr (Hilpert-Korrelation)."""
-    if 40 < Re <= 4000:
-        C, m, n = 0.683, 0.466, 0.37
-    elif 4000 < Re <= 40_000:
-        C, m, n = 0.193, 0.618, 0.37
-    elif 40_000 < Re <= 400_000:
-        C, m, n = 0.0266, 0.805, 0.37
-    else:
-        raise ValueError("Reynolds-Zahl außerhalb des gültigen Bereichs für die Hilpert-Korrelation.")
-    Nu = C * Re ** m * Pr ** n
-    return Nu
+    """
+    Berechnet die mittlere Nusselt-Zahl für eine Querströmung über einen Zylinder.
+   nach Krischer und Kast(VDI-Wärmeatlas, Kaptiel G6)
+    """
+    # Überprüfung der Gültigkeitsbereiche
+    if not (10 <= Re <= 10 ** 7):
+        raise ValueError(f"Die Reynolds-Zahl {Re} liegt außerhalb des Gültigkeitsbereichs (10 <= Re <= 10 ** 7).")
+    if not (0.6 <= Pr <= 1000):
+        raise ValueError(f"Die Prandtl-Zahl {Pr} liegt außerhalb des Gültigkeitsbereichs (0.6 <= Pr <= 1000).")
+
+    Nu_lam = 0.664 * (Re ** 0.5) * (Pr ** (1 / 3))    # Laminarer Anteil
+    Nu_turb = 0.037 * (Re ** 0.8) * Pr / (1 + 2.443 * (Re ** -0.1) * (Pr ** (2 / 3) - 1))     # Turbulenter Anteil
+    Nu_ab = 0.3 + math.sqrt(Nu_lam ** 2 + Nu_turb ** 2)     # Kombinierte Nusselt-Zahl
+
+    return Nu_ab
 
 
 def berechne_waermeuebergangsko(Nu, kappa, D):
@@ -175,7 +189,7 @@ def berechne_dT_lm(T_hot_in, T_hot_out, T_cold_in, T_cold_out):
     delta_T1 = T_hot_in - T_cold_out
     delta_T2 = T_hot_out - T_cold_in
     if delta_T1 == delta_T2:
-        return delta_T1  # Vermeidung von Division durch null
+        return 1/2 * (delta_T1 + delta_T2)  # Vermeidung von Division durch null
     else:
         return (delta_T1 - delta_T2) / np.log(delta_T1 / delta_T2)
 
@@ -199,8 +213,8 @@ for D_r in D_r_Werte:
     for L_r in L_r_Werte:
         A_rohr = np.pi * (D_r / 2) ** 2  # Querschnittsfläche des Rohrs
         u_w = m_dot_w / (rho_w_Tm * A_rohr)  # Wassergeschwindigkeit im Rohr
-        Re_w = berechne_re(rho_w_Tm, u_w, D_r, my_w_Tm)
-        Nu_w = berechne_nu_rohr(Re_w, Pr_w_Tm)
+        Re_w = berechne_re(u_w, D_r, ny_w_Tm)
+        Nu_w = berechne_nu_rohr(Re_w, Pr_w_Tm, D_r, L_r)
         alpha_w = berechne_waermeuebergangsko(Nu_w, kappa_w_Tm, D_r)
 
         for u_ab in u_ab_Werte:
@@ -209,9 +223,9 @@ for D_r in D_r_Werte:
                 # Annahme, dass T_ab keine Temperaturänderung erfährt
                 dT_lm = berechne_dT_lm(T_ab, T_ab, T_w_ein, T_w_aus)
 
-                rho_ab = interpolate_value(data_stickstoff_converted, 't', 'rho', T_ab)
-                my_ab = interpolate_value(data_stickstoff_converted, 't', 'my', T_ab)
-                Re_ab = berechne_re(rho_ab, u_ab, D_r, my_ab)
+                ny_ab = interpolate_value(data_stickstoff_converted, 't', 'ny', T_ab)
+                l_ue = math.pi / 2 * D_r # Überströmlänge, nötig für RE
+                Re_ab = berechne_re(u_ab, l_ue, ny_ab)
                 Pr_ab = interpolate_value(data_stickstoff_converted, 't', 'pr', T_ab)
                 Nu_ab = berechne_nu_ab(Re_ab, Pr_ab)
                 kappa_ab = interpolate_value(data_stickstoff_converted, 't', 'kappa', T_ab)
