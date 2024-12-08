@@ -25,20 +25,20 @@ data_wasser = {
     "Prandtl-Zahl (Pr)": [8.093, 4.943],
 }
 
-# Stoffwerte Stickstoff p=1bar aus VDI Wärmeatlas(Kapitel C2.3)
-data_stickstoff = {
+# Stoffwerte trockene Luft p=1bar aus VDI Wärmeatlas(Kapitel C2.3)
+data_luft = {
     "Temperatur (t, °C)": [250, 300, 350, 400, 450, 500],
-    "Dichte (rho, kg/m³)": [0.64376, 0.5876, 0.54045, 0.50031, 0.46572, 0.43561],
-    "Spezifische Enthalpie (h, 10³ J/kg)": [545, 598.2, 651.9, 706.2, 761.1, 816.6],
-    "Spezifische Entropie (s, 10³ J/kg·K)": [7.428, 7.525, 7.615, 7.699, 7.777, 7.851],
-    "Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)": [1.06, 1.07, 1.08, 1.092, 1.104, 1.116],
-    "Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)": [0.763, 0.772, 0.783, 0.795, 0.807, 0.819],
-    "Schallgeschwindigkeit (ws, m/s)": [464.7, 485.5, 505.3, 524.1, 542.1, 559.4],
-    "Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)": [40.42, 43.32, 46.13, 48.87, 51.53, 54.14],
-    "Dynamische Viskosität (eta, 10⁻⁶ Pa·s)": [26.9, 28.66, 30.35, 31.98, 33.56, 35.08],
-    "Kinematische Viskosität (ny, 10⁻⁷ m²/s)": [417.9, 487.8, 561.6, 639.2, 720.5, 805.4],
-    "Temperaturleitfähigkeit (a, 10⁻⁷ m²/s)": [592.2, 689.3, 790.2, 894.7, 1002.6, 1113.8],
-    "Prandtl-Zahl (Pr)": [0.7057, 0.7076, 0.7107, 0.7144, 0.7187, 0.7231],
+    "Dichte (rho, kg/m³)": [0.6655, 0.6075, 0.5587, 0.5172, 0.4815, 0.4503],
+    "Spezifische Enthalpie (h, 10³ J/kg)": [228.9, 280.9, 333.5, 386.6, 440.3, 494.7],
+    "Spezifische Entropie (s, 10³ J/kg·K)": [0.5751, 0.6700, 0.7579, 0.8399, 0.9169, 0.9896],
+    "Spezifische isobare Wärmekapazität (cp, 10³ J/kg·K)": [1.035, 1.045, 1.057, 1.069, 1.081, 1.093],
+    "Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)": [0.7472, 0.7580, 0.7695, 0.7815, 0.7935, 0.8054],
+    "Schallgeschwindigkeit (ws, m/s)": [456.2, 476.6, 495.9, 514.3, 532.0, 549.0],
+    "Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)": [41.38, 44.42, 47.37, 50.24, 53.05, 55.80],
+    "Dynamische Viskosität (eta, 10⁻⁶ Pa·s)": [27.97, 29.81, 31.58, 33.28, 34.93, 36.53],
+    "Kinematische Viskosität (ny, 10⁻⁶ m²/s)": [4.203, 4.907, 5.652, 6.435, 7.256, 8.112],
+    "Temperaturleitfähigkeit (a, 10⁻⁷ m²/s)": [601.0, 699.5, 802.2, 908.9, 1019.5, 1133.9],
+    "Prandtl-Zahl (Pr)": [0.6993, 0.7016, 0.7046, 0.7080, 0.7117, 0.7154],
 }
 
 # Kurzbezeichnungen für die Stoffwerte
@@ -49,7 +49,6 @@ label_mapping = {
     'Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)': 'cv',
     'Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)': 'kappa',
     'Kinematische Viskosität (ny, 10⁻⁶ m²/s)': 'ny',
-    'Kinematische Viskosität (ny, 10⁻⁷ m²/s)': 'ny',
     'Prandtl-Zahl (Pr)': 'pr',
 }
 
@@ -59,7 +58,6 @@ units_mapping = {
     'Spezifische isochore Wärmekapazität (cv, 10³ J/kg·K)': 10 ** 3,
     'Wärmeleitfähigkeit (kappa, 10⁻³ W/m·K)': 10 ** -3,
     'Kinematische Viskosität (ny, 10⁻⁶ m²/s)': 10 ** -6,
-    'Kinematische Viskosität (ny, 10⁻⁷ m²/s)': 10 ** -7,
 }
 
 
@@ -111,7 +109,7 @@ def interpolate_value(data, x_label, y_label, x_value):
 
 
 # Daten konvertieren
-data_stickstoff_converted = convert_data(data_stickstoff, units_mapping, label_mapping)
+data_luft_converted = convert_data(data_luft, units_mapping, label_mapping)
 data_wasser_converted = convert_data(data_wasser, units_mapping, label_mapping)
 # Test print('cp', data_wasser_converted["cp"])
 
@@ -153,7 +151,7 @@ def berechne_nu_rohr(Re, Pr, d_rohr, l_rohr):
     Berechnet die Nusselt-Zahl bei voll ausgebildeter turbulenter Strömung(Re > 10 ** 4)
     nach Gnielinski(VDI-Wärmeatlas, Kaptiel G1, 4.1)
     """
-    if Re <= 10 ** 4:
+    if Re <= 1 ** 4:
         raise ValueError("Reynolds-Zahl muss > 10 ** 4 sein.")
     xi = (1.8 * math.log10(Re) - 1.5) ** -2
     nu_rohr = ((xi / 8) * (Re - 1000) * Pr) / (1 + 12.7 * math.sqrt(xi / 8) * (Pr ** (2 / 3) - 1))
@@ -223,12 +221,12 @@ for D_r in D_r_Werte:
                 # Annahme, dass T_ab keine Temperaturänderung erfährt
                 dT_lm = berechne_dT_lm(T_ab, T_ab, T_w_ein, T_w_aus)
 
-                ny_ab = interpolate_value(data_stickstoff_converted, 't', 'ny', T_ab)
+                ny_ab = interpolate_value(data_luft_converted, 't', 'ny', T_ab)
                 l_ue = math.pi / 2 * D_r # Überströmlänge, nötig für RE
                 Re_ab = berechne_re(u_ab, l_ue, ny_ab)
-                Pr_ab = interpolate_value(data_stickstoff_converted, 't', 'pr', T_ab)
+                Pr_ab = interpolate_value(data_luft_converted, 't', 'pr', T_ab)
                 Nu_ab = berechne_nu_ab(Re_ab, Pr_ab)
-                kappa_ab = interpolate_value(data_stickstoff_converted, 't', 'kappa', T_ab)
+                kappa_ab = interpolate_value(data_luft_converted, 't', 'kappa', T_ab)
                 alpha_ab = berechne_waermeuebergangsko(Nu_ab, kappa_ab, D_r)
                 alpha_ges = berechne_waermeuebergangsko_ges(alpha_w, alpha_ab)
                 Q_dot = berechne_waermestrom(alpha_ges, A_wu, dT_lm)
