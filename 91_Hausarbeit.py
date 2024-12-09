@@ -111,7 +111,6 @@ def interpolate_value(data, x_label, y_label, x_value):
 # Daten konvertieren
 data_luft_converted = convert_data(data_luft, units_mapping, label_mapping)
 data_wasser_converted = convert_data(data_wasser, units_mapping, label_mapping)
-# Test print('cp', data_wasser_converted["cp"])
 
 # Werte für Rohr
 m_dot_w = 0.2  # kg/s
@@ -148,33 +147,27 @@ def berechne_re(u, L, ny):
 
 def berechne_nu_rohr(Re, Pr, d_rohr, l_rohr):
     """
-    Berechnet die Nusselt-Zahl bei voll ausgebildeter turbulenter Strömung(Re > 10 ** 4)
-    nach Gnielinski(VDI-Wärmeatlas, Kaptiel G1, 4.1)
+    Berechnet die Nusselt-Zahl bei voll ausgebildeter turbulenter Strömung(Re <= 4 ** 3)
+    nach Gnielinski(VDI-Wärmeatlas, Kaptiel G1, 4.1 Formel 28)
     """
-    if Re <= 1 ** 4:
-        raise ValueError("Reynolds-Zahl muss > 10 ** 4 sein.")
+    if Re >= 10 ** 6 or Re <= 4 ** 3:
+        raise ValueError("Reynolds-Zahl muss größer 4 ** 3 sein.")
     xi = (1.8 * math.log10(Re) - 1.5) ** -2
     nu_rohr = ((xi / 8) * (Re - 1000) * Pr) / (1 + 12.7 * math.sqrt(xi / 8) * (Pr ** (2 / 3) - 1))
-    nu_rohr *= 1 + (d_rohr / l_rohr) ** (2 / 3)
+    nu_rohr *= 1 + ((1/3) * (d_rohr / l_rohr)) ** (2 / 3)
     return nu_rohr
 
 
-def berechne_nu_ab(Re, Pr):
+def berechne_nu_ab(Re_D, Pr):
     """
     Berechnet die mittlere Nusselt-Zahl für eine Querströmung über einen Zylinder.
-   nach Krischer und Kast(VDI-Wärmeatlas, Kaptiel G6)
+    nach Incropera, Frank P.: Fundamentals of heat and mass transfer(S.420. Formel:7.54)
     """
-    # Überprüfung der Gültigkeitsbereiche
-    if not (10 <= Re <= 10 ** 7):
-        raise ValueError(f"Die Reynolds-Zahl {Re} liegt außerhalb des Gültigkeitsbereichs (10 <= Re <= 10 ** 7).")
-    if not (0.6 <= Pr <= 1000):
-        raise ValueError(f"Die Prandtl-Zahl {Pr} liegt außerhalb des Gültigkeitsbereichs (0.6 <= Pr <= 1000).")
+    term1 = (0.62 * (Re_D ** 0.5) * (Pr ** (1 / 3))) / (1 + (0.4 / Pr) ** (2 / 3)) ** 0.25
+    term2 = (1 + (Re_D / 282000) ** (5 / 8)) ** (4 / 5)
+    Nu = 0.3 + term1 * term2
+    return Nu
 
-    Nu_lam = 0.664 * (Re ** 0.5) * (Pr ** (1 / 3))    # Laminarer Anteil
-    Nu_turb = 0.037 * (Re ** 0.8) * Pr / (1 + 2.443 * (Re ** -0.1) * (Pr ** (2 / 3) - 1))     # Turbulenter Anteil
-    Nu_ab = 0.3 + math.sqrt(Nu_lam ** 2 + Nu_turb ** 2)     # Kombinierte Nusselt-Zahl
-
-    return Nu_ab
 
 
 def berechne_waermeuebergangsko(Nu, kappa, D):
@@ -222,8 +215,7 @@ for D_r in D_r_Werte:
                 dT_lm = berechne_dT_lm(T_ab, T_ab, T_w_ein, T_w_aus)
 
                 ny_ab = interpolate_value(data_luft_converted, 't', 'ny', T_ab)
-                l_ue = math.pi / 2 * D_r # Überströmlänge, nötig für RE
-                Re_ab = berechne_re(u_ab, l_ue, ny_ab)
+                Re_ab = berechne_re(u_ab, D_r, ny_ab)
                 Pr_ab = interpolate_value(data_luft_converted, 't', 'pr', T_ab)
                 Nu_ab = berechne_nu_ab(Re_ab, Pr_ab)
                 kappa_ab = interpolate_value(data_luft_converted, 't', 'kappa', T_ab)
@@ -231,7 +223,6 @@ for D_r in D_r_Werte:
                 alpha_ges = berechne_waermeuebergangsko_ges(alpha_w, alpha_ab)
                 Q_dot = berechne_waermestrom(alpha_ges, A_wu, dT_lm)
 
-                # print(f"D_r: {D_r}, L_r: {L_r}, u_ab: {u_ab}, T_ab: {T_ab}, dt_lmP: {dT_lm}: Q_dot: {Q_dot}")
                 # Ergebnisse speichern
                 ergebnisse.append({
                     'D_r': D_r,
@@ -241,7 +232,6 @@ for D_r in D_r_Werte:
                     'Q_dot': Q_dot,
                     'Erfuellt Anforderung': Q_dot >= Q_dot_erf
                 })
-                # print(ergebnisse)
 
 # Ergebnisse in ein DataFrame konvertieren
 df = pd.DataFrame(ergebnisse)
@@ -276,7 +266,7 @@ for T_ab in T_ab_Werte:
     plt.plot(subset['u_ab'], subset['Q_dot'], label=f'T_gas = {T_ab:.1f} K')
 
 plt.axhline(y=Q_dot_erf, color='r', linestyle='--', label='Erforderlicher $\dot{Q}$')
-plt.xlabel('Rohrdurchmesser D_r (m)')
+plt.xlabel('Abgasgeschwindigkeit u (m/s)')
 plt.ylabel('Wärmestrom $\dot{Q}$ (W)')
 plt.title('Einfluss der Gasgeschwindigkeit auf den Wärmestrom')
 plt.legend()
