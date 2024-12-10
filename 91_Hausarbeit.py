@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import math
 
-# Stoffwerte Wasser bei p=1bar aus VDI Wärmeatlas(Kapitel C2.1)
+# Stoffwerte Wasser bei p=1bar aus VDI Wärmeatlas(Kapitel D2.1)
 data_wasser = {
     "Temperatur (t, °C)": [15, 34],
     "Dichte (rho, kg/m³)": [999.1, 994.38],
@@ -25,7 +25,7 @@ data_wasser = {
     "Prandtl-Zahl (Pr)": [8.093, 4.943],
 }
 
-# Stoffwerte trockene Luft p=1bar aus VDI Wärmeatlas(Kapitel C2.3)
+# Stoffwerte trockene Luft p=1bar aus VDI Wärmeatlas(Kapitel D2.2)
 data_luft = {
     "Temperatur (t, °C)": [250, 300, 350, 400, 450, 500],
     "Dichte (rho, kg/m³)": [0.6655, 0.6075, 0.5587, 0.5172, 0.4815, 0.4503],
