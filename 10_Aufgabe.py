@@ -9,7 +9,7 @@ import fipy as fp
 import numpy as np
 
 # Parameter
-T_u = 20 + 273.15       # Umgebungstemperatur in K
+T_u = 20.0       # Umgebungstemperatur
 eps = 0.5   # Absorptionsgrad
 h = 5.0            # Konvektiver Wärmeübergang W/(m²·K)
 sigma = 5.67e-8     # Stefan-Boltzmann-Konstante W/(m²·K^4)
@@ -51,3 +51,52 @@ def berechnung(P_l, Konvektion=False, endtime=60, dt=dt):
 
     eq = fp.TransientTerm(rho*cp) == fp.DiffusionTerm(lam) + las
 
+    # Hier noch Konvektion einfüfen
+    # Lösen
+    steps = int(endtime / dt)
+    times = []
+    max_temps = []
+    T_1_grenz = None
+    T_2_grenz = None
+    for step in range(steps):
+        current_time = (step + 1) * dt
+        eq.solve(var=temp, dt=dt)
+
+        T_max = temp.value.max()
+        max_temps.append(T_max)
+        times.append(current_time)
+
+        # Erreichen bestimmter Temperaturen prüfen
+        if (T_1_grenz is None) and (T_max >= 80.0):
+            T_1_grenz = current_time
+        if (T_2_grenz is None) and (T_max >= 180.0):
+            T_2_grenz = current_time
+
+    return np.array(times), np.array(max_temps), T_1_grenz, T_2_grenz, temp
+
+# Verschiedene Szenarien simulieren
+szenarien = [
+    {"P": 1.0, "ko": False, "label": "1W ohne Konv."},
+    #{"P": 1.0, "ko": True, "label": "1W mit Konv."},
+    {"P": 50.0, "ko": False, "label": "50W ohne Konv."},
+    #{"P": 50.0, "ko": True, "label": "50W mit Konv."},
+]
+
+plt.figure(figsize=(10, 6))
+for sz in szenarien:
+    times, max_temps, T_1_grenz, T_2_grenz, temp = berechnung(sz["P"], sz["ko"])
+    plt.plot(times, max_temps, label=sz["label"])
+    print(f"\nErgebnisse für {sz['label']}:")
+    if T_1_grenz is not None:
+        print(f"Zeit bis 80°C: {T_1_grenz:.2f} s")
+    if T_2_grenz is not None:
+        print(f"Zeit bis 180°C: {T_2_grenz:.2f} s")
+    print(f"Max. Temperatur nach 60 s: {max_temps[-1]:.2f} °C")
+    print("--------------------------------------------------------")
+
+plt.xlabel("Zeit [s]")
+plt.ylabel("Max. Temperatur [°C]")
+plt.title("Maximale Temperaturentwicklung über die Zeit")
+plt.legend()
+plt.grid(True)
+plt.show()
