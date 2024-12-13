@@ -40,7 +40,7 @@ x = mesh.x.value
 # -----------------------------------------------------------
 def laser(P_l, x):
     """
-    Funktion zur Berechnung des volumetrischen Quellterms des Lasers
+    Berechnet den Volumen-Quellterm durch den Laser.
     """
     laser_center = 0.5 * L
     bereich = (x > laser_center - laser_width / 2) & (x < laser_center + laser_width / 2)
@@ -87,10 +87,10 @@ def berechnung(P_l, Konvektion=False, endtime=endtime, dt=dt):
 # -----------------------------------------------------------
 # Verschiedene Szenarien simulieren
 szenarien = [
-    {"P": 1.0, "ko": False, "label": "1W ohne Konv."},
-    {"P": 1.0, "ko": True, "label": "1W mit Konv."},
-    {"P": 50.0, "ko": False, "label": "50W ohne Konv."},
-    {"P": 50.0, "ko": True, "label": "50W mit Konv."},
+    {"P": 1.0, "ko": False, "label": "1W ohne Konv./Stra."},
+    {"P": 1.0, "ko": True, "label": "1W mit Konv./Stra."},
+    {"P": 50.0, "ko": False, "label": "50W ohne Konv./Stra."},
+    {"P": 50.0, "ko": True, "label": "50W mit Konv./Stra."},
 ]
 
 # Ergebnisse speichern
