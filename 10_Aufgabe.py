@@ -11,12 +11,12 @@ import numpy as np
 # -----------------------------------------------------------
 # Parameter
 # -----------------------------------------------------------
-T_u = 20.0 # Umgebungstemperatur
+T_u = 20.0 + 273.15 # Umgebungstemperatur
 eps = 0.5 # Absorptionsgrad
 alpha = 5.0 # Konvektiver Wärmeübergang
 sigma = 5.67e-8 # Stefan-Boltzmann-Konstante
 endtime = 120 # Gesamtberechnungszeit
-dt = 1.0 # Zeitschritt für die Berechnung
+dt = 0.5 # Zeitschritt für die Berechnung
 
 # Stoffdaten Stahl
 rho = 8000.0 # Dichte Stahl kg/m^3
@@ -56,7 +56,8 @@ def berechnung(P_l, Konvektion=False, endtime=endtime, dt=dt):
 
     if Konvektion:
         # Aus AB9_Laserheizen
-        q_verlust = - (2.0 / d) * (alpha * (temp - T_u) + sigma * eps * (temp ** 4 - T_u ** 4))
+        # Faktor von 2/d, damit Wärmestrom pro Volumen in der Berechnung steht
+        q_verlust = - (2.0/ d) * (alpha * (temp - T_u) + sigma * eps * (temp ** 4 - T_u ** 4))
         eq = fp.TransientTerm(rho * cp) == fp.DiffusionTerm(lam) + las + q_verlust
     else:
         eq = fp.TransientTerm(rho*cp) == fp.DiffusionTerm(lam) + las
@@ -75,9 +76,9 @@ def berechnung(P_l, Konvektion=False, endtime=endtime, dt=dt):
         times.append(current_time)
 
         # Erreichen bestimmter Temperaturen prüfen
-        if (T_1_grenz is None) and (T_max >= 80.0):
+        if (T_1_grenz is None) and (T_max >= (80.0 + 273.15)):
             T_1_grenz = current_time
-        if (T_2_grenz is None) and (T_max >= 180.0):
+        if (T_2_grenz is None) and (T_max >= (180.0 + 273.15)):
             T_2_grenz = current_time
 
     return np.array(times), np.array(max_temps), T_1_grenz, T_2_grenz, temp
@@ -112,11 +113,11 @@ for sz in szenarien:
         print(f"Zeit bis 180°C: Temperatur nicht erreicht, innerhalb von {endtime} s")
     if 60 in times:
         idx = np.where(times == 60)[0][0]  # Ersten Treffer nehmen
-        print(f"Max. Temperatur nach 60 s: {max_temps[idx]:.2f} °C")
+        print(f"Max. Temperatur nach 60 s: {max_temps[idx]:.2f} K")
     print("--------------------------------------------------------")
 
 plt.xlabel("Zeit [s]")
-plt.ylabel("Max. Temperatur [°C]")
+plt.ylabel("Max. Temperatur [K]")
 plt.title("Maximale Temperaturentwicklung über die Zeit")
 plt.legend()
 plt.grid(True)
@@ -126,7 +127,7 @@ plt.figure(figsize=(10,6))
 for label, T_feld in end_temps.items():
     plt.plot(x, T_feld, label=f"{label} nach {endtime}s")
 plt.xlabel("Länge [m]")
-plt.ylabel("Temperatur [°C]")
+plt.ylabel("Temperatur [K]")
 plt.title("Temperaturverteilung über die Länge")
 plt.grid(True)
 plt.legend()
