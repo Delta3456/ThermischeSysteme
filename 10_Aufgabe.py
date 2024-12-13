@@ -8,32 +8,36 @@ import matplotlib.pyplot as plt
 import fipy as fp
 import numpy as np
 
+# -----------------------------------------------------------
 # Parameter
-T_u = 20.0       # Umgebungstemperatur
-eps = 0.5   # Absorptionsgrad
-h = 5.0            # Konvektiver Wärmeübergang W/(m²·K)
-sigma = 5.67e-8     # Stefan-Boltzmann-Konstante W/(m²·K^4)
-endtime = 300.0
-dt = 0.1 # Zeitschritt für die Brechnung
+# -----------------------------------------------------------
+T_u = 20.0 # Umgebungstemperatur
+eps = 0.5 # Absorptionsgrad
+alpha = 5.0 # Konvektiver Wärmeübergang
+sigma = 5.67e-8 # Stefan-Boltzmann-Konstante
+endtime = 120 # Gesamtberechnungszeit
+dt = 1.0 # Zeitschritt für die Berechnung
 
 # Stoffdaten Stahl
-rho = 8000.0       # Dichte Stahl kg/m^3
-cp = 460.0         # Wärmekapazität J/(kg·K)
-lam = 17.0         # Wärmeleitfähigkeit W/(m·K)
+rho = 8000.0 # Dichte Stahl kg/m^3
+cp = 460.0 # Wärmekapazität J/(kg·K)
+lam = 17.0 # Wärmeleitfähigkeit W/(m·K)
 
 # Geometrie der Platte
-L = 0.1            # Länge der Platte [m]
-d = 0.005          # Dicke [m]
-b = 0.02           # Breite [m]
-laser_width = 0.005  # Breite der Laserzone [m]
+L = 0.1 # Länge der Platte m
+d = 0.005 # Dicke m
+b = 0.02 # Breite m
+laser_width = 0.005  # Breite des Lasers m
 
 # Gitter
 dxy = 1e-3
 nx = int(L / dxy) # Zellenanzahl in x-Richtung
-mesh = fp.Grid1D(dx=d, nx=nx)
+mesh = fp.Grid1D(dx=dxy, nx=nx)
 x = mesh.x.value
 
-
+# -----------------------------------------------------------
+# Funktionen
+# -----------------------------------------------------------
 def laser(P_l, x):
     """
     Funktion zur Berechnung des volumetrischen Quellterms des Lasers
@@ -50,17 +54,20 @@ def berechnung(P_l, Konvektion=False, endtime=endtime, dt=dt):
     quel_l = laser(P_l, x)
     las = fp.CellVariable(name="Laser", mesh=mesh, value=quel_l)
 
-    eq = fp.TransientTerm(rho*cp) == fp.DiffusionTerm(lam) + las
+    if Konvektion:
+        # Aus AB9_Laserheizen
+        q_verlust = - (2.0 / d) * (alpha * (temp - T_u) + sigma * eps * (temp ** 4 - T_u ** 4))
+        eq = fp.TransientTerm(rho * cp) == fp.DiffusionTerm(lam) + las + q_verlust
+    else:
+        eq = fp.TransientTerm(rho*cp) == fp.DiffusionTerm(lam) + las
 
-    # Hier noch Konvektion einfüfen
-    # Lösen
     steps = int(endtime / dt)
     times = []
     max_temps = []
     T_1_grenz = None
     T_2_grenz = None
     for step in range(steps):
-        current_time = (step + 1) * dt
+        current_time = step * dt + dt
         eq.solve(var=temp, dt=dt)
 
         T_max = temp.value.max()
@@ -75,18 +82,25 @@ def berechnung(P_l, Konvektion=False, endtime=endtime, dt=dt):
 
     return np.array(times), np.array(max_temps), T_1_grenz, T_2_grenz, temp
 
+# -----------------------------------------------------------
+# Berechnung und Plot
+# -----------------------------------------------------------
 # Verschiedene Szenarien simulieren
 szenarien = [
     {"P": 1.0, "ko": False, "label": "1W ohne Konv."},
-    #{"P": 1.0, "ko": True, "label": "1W mit Konv."},
+    {"P": 1.0, "ko": True, "label": "1W mit Konv."},
     {"P": 50.0, "ko": False, "label": "50W ohne Konv."},
-    #{"P": 50.0, "ko": True, "label": "50W mit Konv."},
+    {"P": 50.0, "ko": True, "label": "50W mit Konv."},
 ]
+
+# Ergebnisse speichern
+end_temps = {}  # speichert Temperaturfelder am Ende
 
 plt.figure(figsize=(10, 6))
 for sz in szenarien:
     times, max_temps, T_1_grenz, T_2_grenz, temp = berechnung(sz["P"], sz["ko"])
     plt.plot(times, max_temps, label=sz["label"])
+    end_temps[sz["label"]] = temp.value.copy()  # End-Temperaturfeld speichern
     print(f"\nErgebnisse für {sz['label']}:")
     if T_1_grenz is not None:
         print(f"Zeit bis 80°C: {T_1_grenz:.2f} s")
@@ -106,4 +120,14 @@ plt.ylabel("Max. Temperatur [°C]")
 plt.title("Maximale Temperaturentwicklung über die Zeit")
 plt.legend()
 plt.grid(True)
+plt.show()
+
+plt.figure(figsize=(10,6))
+for label, T_feld in end_temps.items():
+    plt.plot(x, T_feld, label=f"{label} nach {endtime}s")
+plt.xlabel("Länge [m]")
+plt.ylabel("Temperatur [°C]")
+plt.title("Temperaturverteilung über die Länge")
+plt.grid(True)
+plt.legend()
 plt.show()
