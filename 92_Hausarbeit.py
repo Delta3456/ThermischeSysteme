@@ -6,6 +6,7 @@ Zweite Hausarbeit - Instationäre Wärmeleitung
 """
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
 from scipy.integrate import solve_ivp
 
 # Parameter -------------------------------------------------------------------
@@ -41,13 +42,13 @@ m_platte = rho_alu * V_platte
 A_platte_out = L_platte * B_platte
 
 # Luft im Gehäuse
-V_luft = L_platte * B_platte * (H_rel + 25) - V_rel
+V_luft = L_platte * B_platte * (H_rel + 0.025) - V_rel
 m_luft = rho_luft * V_luft
 
 # Gehäuse, Kunststoff
 dicke_geh = 0.003
 # Aussenfläche vom Gehäuse ohne Boden, Vereinfacht ist A_geh_out = A_geh_in
-A_geh_out = 2 * (B_platte * (H_rel + 25)) + 2 * (L_platte * (H_rel + 25)) + (L_platte * B_platte)
+A_geh_out = 2 * (B_platte * (H_rel + 0.025)) + 2 * (L_platte * (H_rel + 0.025)) + (L_platte * B_platte)
 V_geh = A_geh_out * dicke_geh
 m_geh = rho_kunst * V_geh
 
@@ -62,6 +63,8 @@ use_regelung = False
 track_fan_power = False
 fan_power = 0.0 # Aktuelle Ventilatorleistung
 fan_alpha = 0.0 # Akteller Wert
+fan_power_fest = 0.0
+fan_alpha_fest = 5.0
 fan_power1 = 100.0
 fan_alpha1 = 30.0
 fan_power2 = 250.0
@@ -104,6 +107,8 @@ params_dict = {
     "track_fan_power": track_fan_power,
     "fan_power": fan_power,
     "fan_alpha": fan_alpha,
+    "fan_power_fest": fan_power_fest,
+    "fan_alpha_fest": fan_alpha_fest,
     "fan_power1": fan_power1,
     "fan_alpha1": fan_alpha1,
     "fan_power2": fan_power2,
@@ -198,8 +203,15 @@ def energiebilanzen(t, y, params):
 
     else:
         # Keine Regelung
-        alpha_platte_out = params["alpha_platte_out"]
-        params["fan_power"] = params["fan_power"]
+        alpha_platte_out = params["fan_alpha_fest"]
+        params["fan_power"] = params["fan_power_fest"]
+
+    # Debbuging
+    """
+    if t % (t_end // 10) < 1:  
+        print(
+            f"t={t / 3600:.1f}h, use_regelung={params['use_regelung']}, fan_alpha_fest={params['fan_alpha_fest']}, fan_power_fest={params['fan_power_fest']}, fan_power={params['fan_power']}")
+    """
 
     # Wärmeströme -----------------------------------------------
     # Relais, gibt nur Wärme ab an die Luft und an die Platte
@@ -268,25 +280,25 @@ check_biot("Gehäusewand", alpha_geh_out, Lc_geh, kappa_kunst)
 
 # Szenarien -----------
 # (1) Ohne Ventilator
-scenario_no_fan = params_dict.copy()
+scenario_no_fan = copy.deepcopy(params_dict)
 scenario_no_fan["use_regelung"] = False
-scenario_no_fan["fan_alpha"] = alpha_platte_out
-scenario_no_fan["fan_power"] = 0.0
+scenario_no_fan["fan_alpha_fest"] = alpha_platte_out
+scenario_no_fan["fan_power_fest"] = 0.0
 
 # (2) Ventilator Stufe 1 (dauerhaft)
-scenario_fan1 = params_dict.copy()
+scenario_fan1 = copy.deepcopy(params_dict)
 scenario_fan1["use_regelung"] = False
-scenario_fan1["fan_alpha"] = fan_alpha1
-scenario_fan1["fan_power"] = fan_power1
+scenario_fan1["fan_alpha_fest"] = fan_alpha1
+scenario_fan1["fan_power_fest"] = fan_power1
 
 # (2) Ventilator Stufe 2 (dauerhaft)
-scenario_fan2 = params_dict.copy()
+scenario_fan2 = copy.deepcopy(params_dict)
 scenario_fan2["use_regelung"] = False
-scenario_fan2["fan_alpha"] = fan_alpha2
-scenario_fan2["fan_power"] = fan_power2
+scenario_fan2["fan_alpha_fest"] = fan_alpha2
+scenario_fan2["fan_power_fest"] = fan_power2
 
 # (4) Regelung
-scenario_regel = params_dict.copy()
+scenario_regel = copy.deepcopy(params_dict)
 scenario_regel["use_regelung"] = True
 scenario_regel["fan_stage"] = 0
 scenario_regel["track_fan_power"] = True
@@ -343,13 +355,13 @@ plt.figure(figsize=(10,6))
 plt.plot(t_nf/3600,  T_rel_nf,  label="(1) T_rel noFan")
 plt.plot(t_f1/3600,  T_rel_f1,  label="(2) T_rel Fan1")
 plt.plot(t_f2/3600,  T_rel_f2,  label="(3) T_rel Fan2")
-plt.plot(t_regel/3600, T_rel_regel, label="(4) T_rel multi")
+plt.plot(t_regel/3600, T_rel_regel, label="(4) T_rel regel")
 
 T_u_plot = [T_umgebung_sinus(ti) for ti in t_nf]
 plt.plot(t_nf/3600, T_u_plot, 'k--', label="T_Umgebung")
 plt.axhline(80, color='r', ls=':', label="80°C-Grenze")
 
-plt.title("Relais-Temperatur in verschiedenen Szenarien")
+plt.title("Temperatur des Relais in verschiedenen Szenarien")
 plt.xlabel("Zeit [h]")
 plt.ylabel("T [°C]")
 plt.legend()
@@ -361,9 +373,8 @@ plt.figure(figsize=(10,6))
 plt.plot(t_nf/3600,  T_platte_nf,  label="(1) T_platte noFan")
 plt.plot(t_f1/3600,  T_platte_f1,  label="(2) T_platte Fan1")
 plt.plot(t_f2/3600,  T_platte_f2,  label="(3) T_platte Fan2")
-plt.plot(t_regel/3600, T_platte_regel, label="(4) T_platte multi")
+plt.plot(t_regel/3600, T_platte_regel, label="(4) T_platte regel")
 plt.plot(t_nf/3600, T_u_plot, 'k--', label="T_Umgebung")
-plt.axhline(80, color='r', ls=':', label="80°C-Grenze")
 plt.title("Temperatur der Montageplatte in verschiedenen Szenarien")
 plt.xlabel("Zeit [h]")
 plt.ylabel("T [°C]")
@@ -376,9 +387,8 @@ plt.figure(figsize=(10,6))
 plt.plot(t_nf/3600,  T_luft_nf,  label="(1) T_luft noFan")
 plt.plot(t_f1/3600,  T_luft_f1,  label="(2) T_luft Fan1")
 plt.plot(t_f2/3600,  T_luft_f2,  label="(3) T_luft Fan2")
-plt.plot(t_regel/3600, T_luft_regel, label="(4) T_luft multi")
+plt.plot(t_regel/3600, T_luft_regel, label="(4) T_luft regel")
 plt.plot(t_nf/3600, T_u_plot, 'k--', label="T_Umgebung")
-plt.axhline(80, color='r', ls=':', label="80°C-Grenze")
 plt.title("Temperatur der Luft im Gehäuse in verschiedenen Szenarien")
 plt.xlabel("Zeit [h]")
 plt.ylabel("T [°C]")
@@ -391,9 +401,8 @@ plt.figure(figsize=(10,6))
 plt.plot(t_nf/3600,  T_geh_nf,  label="(1) T_geh noFan")
 plt.plot(t_f1/3600,  T_geh_f1,  label="(2) T_geh Fan1")
 plt.plot(t_f2/3600,  T_geh_f2,  label="(3) T_geh Fan2")
-plt.plot(t_regel/3600, T_geh_regel, label="(4) T_geh multi")
+plt.plot(t_regel/3600, T_geh_regel, label="(4) T_geh regel")
 plt.plot(t_nf/3600, T_u_plot, 'k--', label="T_Umgebung")
-plt.axhline(80, color='r', ls=':', label="80°C-Grenze")
 plt.title("Temperatur des Kunststoffgehäuses in verschiedenen Szenarien")
 plt.xlabel("Zeit [h]")
 plt.ylabel("T [°C]")
@@ -402,3 +411,7 @@ plt.grid(True)
 plt.tight_layout()
 
 plt.show()
+
+
+
+
