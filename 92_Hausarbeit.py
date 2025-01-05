@@ -1,5 +1,5 @@
 """
-Donnerstag, 02.01.25
+Dienstag, 07.01.25
 @author Janik Focken
 --------------------------------
 Zweite Hausarbeit - Instationäre Wärmeleitung
@@ -16,11 +16,11 @@ rho_alu = 2700.0  # Dichte [kg/m³]
 cp_alu = 837.0     # spezifische Wärme [J/kgK],
 kappa_alu = 236.0  # Wärmeleitfähigkeit [W/mK]
 
-# Stoffeigenschaften Luft bei 0 °C, nach VDI_Wärmeatlas Seite 220
+# Stoffeigenschaften Luft bei 0°C, nach VDI_Wärmeatlas Seite 220
 rho_luft = 1.276      # Dichte [kg/m³]
 cp_luft = 1006.0    # spezifische Wärme [J/kgK]
 
-# Stoffeigenschaften Kunststoff(Polycarbonat)(bei 0°C), Nach VDI_Wärmeatlas Seite 661
+# Stoffeigenschaften Kunststoff(Polycarbonat)(bei 0°C), nach VDI_Wärmeatlas Seite 661
 rho_kunst = 1200.0  # Dichte [kg/m³]
 cp_kunst = 1100.0   # spezifische Wärme [J/kgK]
 kappa_kunst = 0.23   # Wärmeleitfähigkeit [W/mK]
@@ -78,14 +78,12 @@ T_stage1_off = 55.0
 T_stage2_on = 75.0
 T_stage2_off = 70.0
 
-
 # Weitere
 Q_rel = 30.0  # 30 W Verlustleistung
 Rtc = 2.75 * 1e-4 # Nach DeWitt Seite 118
 R_th_RP  = Rtc / A_rel_platte
 t_end = 72*3600 # Simulationszeit
 steps = 2000 # Berechnungsschritte
-
 
 # Parameter-Dictionary
 params_dict = {
@@ -123,7 +121,6 @@ params_dict = {
     "T_stage2_off": T_stage2_off,
 
 }
-
 
 # Funktionen -------------------------------------------------------------------------
 def biot_number(alpha, L_char, kappa):
@@ -274,7 +271,7 @@ def berechnung(params, t_end=t_end, steps=steps):
 
 # Hauptberechnung -------------------------------------------------------------------------
 # Biot-Zahl-Prüfung
-# die Charakteristische Länge für die Biot-Zahl ist, das Volumen durch die Fläche
+# die charakteristische Länge für die Biot-Zahl ist, das Volumen durch die Fläche
 Lc_rel = V_rel / A_rel
 Lc_geh = V_geh / A_geh_out
 check_biot("Relais", alpha_rel_luft, Lc_rel, kappa_alu)
@@ -421,7 +418,3 @@ plt.grid(True)
 plt.tight_layout()
 
 plt.show()
-
-
-
-
