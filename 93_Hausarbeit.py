@@ -38,8 +38,9 @@ class ReactorParameters:
 def fluid_properties(T_degC: float, p_pa: float, x_methanol: float = 0.5) -> Tuple[float, float, float]:
     """
     Bestimmt Dichte, spezifische Wärmekapazität und Wärmeleitfähigkeit des Fluids.
+    T_degC: Fluidtemperatur in °C, p_pa: Druck in Pascal, x_methanol: Anteil Methanol.
     """
-    T_k: float = T_degC + CELSIUS_TO_KELVIN  # Umrechnung in Kelvin
+    T_k: float = T_degC + CELSIUS_TO_KELVIN
     fluid_str: str = f"HEOS::Methanol[{x_methanol}]&Water[{1.0 - x_methanol}]"
     rho: float = PropsSI("D", "T", T_k, "P", p_pa, fluid_str)
     cp: float = PropsSI("CPMASS", "T", T_k, "P", p_pa, fluid_str)
@@ -51,35 +52,33 @@ def fluid_properties(T_degC: float, p_pa: float, x_methanol: float = 0.5) -> Tup
 # ---------------------------------------------------------
 def segment_heating_power(ganghoehe: float, seg_length: float, d_out: float, band_power_density: float) -> float:
     """
-    Berechnet die spezifische Heizleistung (W/m) eines Segments.
-    ganghoehe: Wicklungsabstand [m]
-    seg_length: Segmentlänge [m]
-    d_out: Außendurchmesser [m]
-    band_power_density: Leistungsdichte [W/m]
+    Berechnet die Heizbandleistung (W/m) eines Segments.
+    ganghoehe: Wicklungsabstand [m], seg_length: Segmentlänge [m],
+    d_out: Außendurchmesser [m], band_power_density: Leistungsdichte [W/m].
     """
     if ganghoehe <= 0:
         return 0.0
-    turns_per_m: float = 1.0 / ganghoehe
-    circumference: float = np.pi * d_out
+    turns_per_m: float = 1.0 / ganghoehe      # Windungen pro Meter
+    circumference: float = np.pi * d_out         # Umfang des Rohrs [m]
     band_length_seg: float = turns_per_m * circumference * seg_length
     P_seg: float = band_power_density * band_length_seg  # Gesamtleistung im Segment [W]
-    q_in_segment: float = P_seg / seg_length  # Heizleistung pro Meter [W/m]
+    q_in_segment: float = P_seg / seg_length             # Heizleistung pro Meter [W/m]
     return q_in_segment
 
 # ---------------------------------------------------------
-# C) Differentialgleichungssystem für die Reaktionszone (Temperatur und Umsatz)
+# C) Differentialgleichungssystem (Temperatur und Umsatz)
 # ---------------------------------------------------------
 def reaction_ode(_x: float, y: np.ndarray, params: ReactorParameters) -> List[float]:
     """
-    Definiert das ODE-System für die Reaktionszone.
+    Definiert das ODE-System für eine Zone (Vorwärm- oder Reaktionszone).
     y = [T, X] mit:
-      T: Fluidtemperatur [°C]
-      X: Methanol-Umsatz (0 bis 1)
+      T: Fluidtemperatur [°C],
+      X: Umsatz (0 bis 1) – in der Vorwärmzone irrelevant.
     Der Heizbandeintrag fließt über die dynamisch berechnete Wandtemperatur ein:
-      T_wall = max(300°C, T + q_in / (alpha_i * π * d_in))
+      T_wall = max(300°C, T + q_in / (alpha_i * π * d_in)).
     """
-    T: float = y[0]  # Fluidtemperatur [°C]
-    X: float = y[1]  # Umsatz
+    T: float = y[0]
+    X: float = y[1]
     m_dot: float = params.m_dot
     cp: float = params.cp
     alpha_i: float = params.alpha_i
@@ -90,8 +89,8 @@ def reaction_ode(_x: float, y: np.ndarray, params: ReactorParameters) -> List[fl
     T_wall_dynamic: float = T + q_in / (alpha_i * np.pi * d_in)
     if T_wall_dynamic < 300.0:
         T_wall_dynamic = 300.0  # Mindestwandtemperatur
-    perimeter: float = np.pi * d_in  # Innenperimeter
-    Q_conv: float = alpha_i * perimeter * (T_wall_dynamic - T)  # Konvektiver Wärmeaustausch
+    perimeter: float = np.pi * d_in
+    Q_conv: float = alpha_i * perimeter * (T_wall_dynamic - T)
 
     n_dot_meoh: float = params.n_dot_meoh
     dH_reac: float = params.dH_reac
@@ -99,36 +98,36 @@ def reaction_ode(_x: float, y: np.ndarray, params: ReactorParameters) -> List[fl
     dXdx: float = k_reac * (1.0 - X)
     Q_reac: float = n_dot_meoh * dH_reac * dXdx  # Wärmeentzug durch Reaktion
 
-    # Differentialgleichung für Fluidtemperatur (Heizbandleistung ist in T_wall_dynamic integriert)
     dTdx: float = (Q_conv - Q_reac) / (m_dot * cp)
     return [dTdx, dXdx]
 
 # ---------------------------------------------------------
 # D) Sequentielle Optimierung der Ganghöhen-Verteilung
 # ---------------------------------------------------------
-def sequential_optimize_ganghoehen(T_in: float, N_seg: int, L_reac: float, d_in: float, d_out: float,
+def sequential_optimize_ganghoehen(T_in: float, N_seg: int, L_zone: float, d_in: float, d_out: float,
                                    band_power_density: float, params_const: ReactorParameters,
                                    T_target: float = 300.0, Kp: float = 0.0002,
                                    ganghoehe_init: float = 0.015, ganghoehe_min: float = 0.0082, ganghoehe_max: float = 1.0,
                                    extra_adjust: bool = False, debug: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List]:
     """
-    Optimiert den Wicklungsabstand segmentweise.
+    Optimiert den Wicklungsabstand (Ganghöhe) segmentweise.
+    L_zone entspricht der Länge der jeweiligen Zone (Vorwärmzone oder Reaktionszone).
     Rückgaben:
-      ganghoehen: Array der Ganghöhen [m]
-      T_profile: Array der Fluidtemperaturen [°C]
-      X_profile: Array der Methanol-Umsätze
-      T_wall_profile: Array der dynamisch berechneten Wandtemperaturen [°C]
-      debug_info: Debug-Informationen (optional)
+      ganghoehen: Array der optimierten Ganghöhen [m],
+      T_profile: Fluidtemperaturen [°C],
+      X_profile: Umsätze (nur in der Reaktionszone relevant),
+      T_wall_profile: Dynamisch berechnete Wandtemperaturen [°C],
+      debug_info: Debug-Informationen (optional).
     """
-    seg_length: float = L_reac / N_seg
+    seg_length: float = L_zone / N_seg
     ganghoehen: np.ndarray = np.zeros(N_seg)
     T_profile: np.ndarray = np.zeros(N_seg + 1)
     X_profile: np.ndarray = np.zeros(N_seg + 1)
     T_wall_profile: np.ndarray = np.zeros(N_seg + 1)
 
-    T_profile[0] = T_in         # Startfluidtemperatur
-    X_profile[0] = 0.0          # Kein Umsatz zu Beginn
-    T_wall_profile[0] = 300.0   # Anfangswert: Mindestwandtemperatur
+    T_profile[0] = T_in
+    X_profile[0] = 0.0
+    T_wall_profile[0] = 300.0  # Startwert: Mindestwandtemperatur
     current_ganghoehe_local: float = ganghoehe_init
 
     increasing_count: int = 0
@@ -137,9 +136,9 @@ def sequential_optimize_ganghoehen(T_in: float, N_seg: int, L_reac: float, d_in:
 
     for i in range(N_seg):
         T_start: float = T_profile[i]
-        # Heizbandeintrag im aktuellen Segment
+        # Berechnung des Heizbandeintrags im Segment
         q_in_seg: float = segment_heating_power(current_ganghoehe_local, seg_length, d_out, band_power_density)
-        # Kopie der konstanten Parameter mit aktuellem q_in_segment
+        # Parameterkopie mit aktuellem q_in_segment
         params_seg: ReactorParameters = ReactorParameters(**vars(params_const))
         params_seg.q_in_segment = q_in_seg
 
@@ -204,7 +203,7 @@ def heat_loss_total(T_wall_C: float, T_amb_C: float, length: float, d_in: float,
     if delta_iso <= 0.0:
         sigma: float = 5.670374419e-8
         Q_conv: float = alpha_out * A_outer * (T_wall_K - T_amb_K)
-        Q_rad: float = eps * sigma * A_outer * (T_wall_K ** 4 - T_amb_K ** 4)
+        Q_rad: float = eps * sigma * A_outer * (T_wall_K**4 - T_amb_K**4)
         Q_dot: float = Q_conv + Q_rad
     else:
         r_iso_outer: float = r_outer + delta_iso
@@ -224,7 +223,7 @@ def calc_alpha_i(T_degC: float, p_pa: float, m_dot: float, d_in: float, x_methan
     T_k = T_degC + CELSIUS_TO_KELVIN
     fluid_str = f"HEOS::Methanol[{x_methanol}]&Water[{1.0 - x_methanol}]"
     mu = PropsSI("V", "T", T_k, "P", p_pa, fluid_str)
-    u = 0.01  # mittlere Strömungsgeschwindigkeit [m/s]
+    u = 0.01  # m/s, mittlere Strömungsgeschwindigkeit
     nu = mu / rho
     Re = (u * d_in) / nu
     if Re < 2300:
@@ -242,9 +241,10 @@ def main() -> None:
     d_wall: float = 0.003    # m, Rohrwanddicke
     d_out: float = d_in + 2 * d_wall  # m, Außendurchmesser
 
-    L_vor: float = 0.30      # m, Länge der Vorwärmzone
+    L_vor: float = 0.1      # m, Länge der Vorwärmzone
     L_reac: float = 0.60     # m, Länge der Reaktionszone
-    N_seg: int = 3000        # Anzahl der Segmente in der Reaktionszone (hohe Auflösung)
+    N_seg_reac: int = 3000   # Segmente in der Reaktionszone (hohe Auflösung)
+    N_seg_preheat: int = 500 # Segmente in der Vorwärmzone
 
     band_power_density: float = 200.0  # W/m, Leistungsdichte des Heizbands
 
@@ -262,27 +262,50 @@ def main() -> None:
     A_in: float = np.pi * (d_in ** 2) / 4.0  # Querschnittsfläche [m²]
     m_dot: float = rho * u * A_in  # Massenstrom [kg/s]
 
-    # Wärmeübergangs- und Reaktionsdaten
+    # Wärmeübergangs- und Reaktionsdaten für die Reaktionszone
     alpha_i = calc_alpha_i(T_mean, p_reac, m_dot, d_in, x_methanol=0.5, heating=False)
-    alpha_i = 300  # Beispielwert, ggf. experimentell anzupassen
+    alpha_i = 300  # Beispielwert; ggf. experimentell anzupassen
     n_dot_meoh: float = 0.01  # mol/s, Stoffmengenstrom Methanol
     dH_reac: float = 49200.0  # J/mol, Reaktionsenthalpie
-    X_meoh: float = 0.99      # Zielumsatz von Methanol (99%)
+    X_meoh: float = 0.99      # Zielumsatz (99%)
     k_reac: float = -math.log(1 - X_meoh) / L_reac  # kinetischer Parameter [1/m]
 
-    # Zusammenstellung der konstanten Parameter
-    params_const: ReactorParameters = ReactorParameters(
+    # Parameter für die Reaktionszone (chemische Reaktion aktiv)
+    params_reac: ReactorParameters = ReactorParameters(
         m_dot=m_dot,
         cp=cp,
         alpha_i=alpha_i,
         d_in=d_in,
-        T_wall_reac=300.0,  # Initialer Platzhalter; wird dynamisch überschrieben
+        T_wall_reac=300.0,  # Platzhalter; wird dynamisch überschrieben
         n_dot_meoh=n_dot_meoh,
         dH_reac=dH_reac,
         k_reac=k_reac
     )
 
-    # Integration der Vorwärmzone (hier wird T_wall als 300°C angenommen)
+    # Parameter für die Vorwärmzone (keine Reaktion: k_reac=0, n_dot_meoh=0, dH_reac=0)
+    params_preheat = ReactorParameters(
+        m_dot=m_dot,
+        cp=cp,
+        alpha_i=alpha_i,
+        d_in=d_in,
+        T_wall_reac=300.0,
+        n_dot_meoh=n_dot_meoh,
+        dH_reac=0.0,
+        k_reac=0.0
+    )
+
+    # Regelparameter und Startwerte für die Optimierung
+    T_target: float = 300.0  # °C, Zielfluidtemperatur
+    Kp: float = 0.001        # Regelparameter (kleinere Werte dämpfen Schwankungen)
+    ganghoehe_init_reac: float = 0.01  # Startwert für Reaktionszone [m]
+    ganghoehe_init_preheat: float = 0.04  # Startwert für Vorwärmzone [m]
+    # Minimalwerte: hier setzen wir den Minimalwert in der Vorwärmzone als Startwert
+    ganghoehe_min_preheat: float = ganghoehe_init_preheat
+    # Maximale Ganghöhe für Vorwärmzone wird auf 10 gesetzt, für Reaktionszone auf 1
+    ganghoehe_max_preheat: float = 4.0
+    ganghoehe_max_reac: float = 1.0
+
+    # Integration der Vorwärmzone (nur Fluidtemperatur, T_wall = 300°C wird angenommen)
     def ode_vorwaermung(_x: float, T: np.ndarray) -> float:
         perimeter: float = np.pi * d_in
         return alpha_i * perimeter * (300.0 - T[0]) / (m_dot * cp)
@@ -293,44 +316,61 @@ def main() -> None:
     T_vor_profile: np.ndarray = sol_vor.sol(x_vor)[0]
     T_out_vor: float = T_vor_profile[-1]
 
-    # Berechnung der Heizbandlänge in der Vorwärmzone
-    ganghoehe_vor: float = 0.04  # [m] Beispielwert für Wicklungsabstand in der Vorwärmzone
-    band_length_vor: float = L_vor * (np.pi * d_out) / ganghoehe_vor
-
-    # Parameter für die Optimierung in der Reaktionszone
-    T_target: float = 300.0  # °C, Zielfluidtemperatur
-    Kp: float = 0.001        # Regelparameter (kleinere Werte dämpfen Schwankungen)
-    ganghoehe_init: float = 0.01  # [m] Startwert für Wicklungsabstand
-    min_abstand: float = 0.005    # [m] Mindestabstand der Heizbänder
-    diameter_Heizband: float = 0.003  # [m] Durchmesser des Heizbands
-    ganghoehe_min: float = min_abstand * diameter_Heizband
-    ganghoehe_max: float = 1.0  # Maximale Ganghöhe wurde auf 1,0 erhöht
+    # Optimierung der Ganghöhen-Verteilung in der Vorwärmzone
+    opt_ganghoehen_preheat, T_preheat_profile, X_preheat_profile, T_wall_preheat_profile, _ = sequential_optimize_ganghoehen(
+        T_in=T_in,
+        N_seg=N_seg_preheat,
+        L_zone=L_vor,           # Vorwärmzonelänge
+        d_in=d_in,
+        d_out=d_out,
+        band_power_density=band_power_density,
+        params_const=params_preheat,
+        T_target=300.0,
+        Kp=Kp,
+        ganghoehe_init=ganghoehe_init_preheat,
+        ganghoehe_min=ganghoehe_min_preheat,
+        ganghoehe_max=ganghoehe_max_preheat,
+        extra_adjust=False,       # Kein extra Adjust in der Vorwärmzone
+        debug=False
+    )
+    x_preheat: np.ndarray = np.linspace(0, L_vor, N_seg_preheat + 1)
 
     # Optimierung der Ganghöhen-Verteilung in der Reaktionszone
-    opt_ganghoehen, T_reac_profile, X_reac_profile, T_wall_profile, _ = sequential_optimize_ganghoehen(
-        T_in=T_out_vor, N_seg=N_seg, L_reac=L_reac, d_in=d_in, d_out=d_out,
-        band_power_density=band_power_density, params_const=params_const,
-        T_target=T_target, Kp=Kp, ganghoehe_init=ganghoehe_init,
-        ganghoehe_min=ganghoehe_min, ganghoehe_max=ganghoehe_max,
-        extra_adjust=True, debug=False
+    opt_ganghoehen_reac, T_reac_profile, X_reac_profile, T_wall_reac_profile, _ = sequential_optimize_ganghoehen(
+        T_in=T_out_vor,
+        N_seg=N_seg_reac,
+        L_zone=L_reac,
+        d_in=d_in,
+        d_out=d_out,
+        band_power_density=band_power_density,
+        params_const=params_reac,
+        T_target=300.0,
+        Kp=Kp,
+        ganghoehe_init=ganghoehe_init_reac,
+        ganghoehe_min=0.0082,
+        ganghoehe_max=ganghoehe_max_reac,
+        extra_adjust=True,
+        debug=False
     )
-    x_reac: np.ndarray = np.linspace(0, L_reac, N_seg + 1)
+    x_reac: np.ndarray = np.linspace(0, L_reac, N_seg_reac + 1)
 
-    # Gesamtlängen-Arrays für Fluidtemperaturen und Wandtemperaturen:
-    # Vorwärmzone: Wandtemperatur wird als konstant 300°C angenommen
-    x_total = np.concatenate((x_vor, x_reac + L_vor))
-    T_wall_vor_array = np.full_like(x_vor, 300.0)  # Vorwärmzone = 300°C
-    # Reaktionszone: Verwende die dynamisch berechneten Wandtemperaturen
-    T_wall_total = np.concatenate((T_wall_vor_array, T_wall_profile))
+    # Gesamtlängen-Arrays für die Wandtemperatur:
+    # Vorwärmzone: Verwende die optimierten Wandtemperaturen aus der Vorwärmzone
+    x_total_preheat = x_preheat
+    # Reaktionszone: Verschiebe die x-Werte um L_vor
+    x_total_reac = x_reac + L_vor
+    # Kombinierter Verlauf:
+    T_wall_total = np.concatenate((T_wall_preheat_profile, T_wall_reac_profile))
+    x_total = np.concatenate((x_total_preheat, x_total_reac))
 
-    # Berechnung der stöchiometrischen Verteilung der Reaktionsprodukte
+    # Berechnung der stöchiometrischen Verteilung der Reaktionsprodukte (nur in der Reaktionszone relevant)
     X: np.ndarray = X_reac_profile
     y_CH3OH: np.ndarray = (1 - X) / (2 + 2 * X)
     y_H2O: np.ndarray = (1 - X) / (2 + 2 * X)
     y_H2: np.ndarray = (3 * X) / (2 + 2 * X)
     y_CO2: np.ndarray = X / (2 + 2 * X)
 
-    # Berechnung der Wärmeverluste für verschiedene Isolierungen
+    # Berechnung der Wärmeverluste für verschiedene Isolierungen (gesamte Rohrlänge)
     L_total: float = L_vor + L_reac
     iso_list: List[float] = [0.0, 0.02, 0.04]
     iso_labels: List[str] = ["unisoliert", "20 mm", "40 mm"]
@@ -341,7 +381,8 @@ def main() -> None:
                                     lambda_iso=0.073, alpha_out=10.0, eps=0.8)
         Q_loss_list.append(Ql)
 
-    # Plot (a) Temperaturverlauf: Vorwärmzone + Reaktionszone (Fluidtemperaturen)
+    # ------------------------------
+    # Plot (a): Fluidtemperaturverlauf (Vorwärm- & Reaktionszone)
     fig1, ax1 = plt.subplots(figsize=(6, 4))
     ax1.plot(x_vor, T_vor_profile, 'r-', label="Vorwärmzone (Fluid)")
     ax1.plot(x_reac + L_vor, T_reac_profile, 'b-', label="Reaktionszone (Fluid)")
@@ -351,7 +392,8 @@ def main() -> None:
     ax1.grid(True)
     ax1.legend()
 
-    # Plot (b) Umsatzverlauf in der Reaktionszone
+    # ------------------------------
+    # Plot (b): Umsatzverlauf in der Reaktionszone
     fig2, ax2 = plt.subplots(figsize=(6, 4))
     ax2.plot(x_reac, X_reac_profile, 'm-', label="Umsatz (X)")
     ax2.set_xlabel("Reaktorlänge (Reaktionszone) [m]")
@@ -360,7 +402,8 @@ def main() -> None:
     ax2.grid(True)
     ax2.legend()
 
-    # Plot (c) Wärmeverluste (Balkendiagramm)
+    # ------------------------------
+    # Plot (c): Wärmeverluste (Balkendiagramm)
     fig3, ax3 = plt.subplots(figsize=(6, 4))
     barpos: np.ndarray = np.arange(len(iso_list))
     ax3.bar(barpos, Q_loss_list, width=0.4, color=["grey", "orange", "purple"])
@@ -370,35 +413,37 @@ def main() -> None:
     ax3.set_title(f"Wärmeverluste bei T_Innenwand = 300°C, L = {L_total:.2f} m")
     ax3.grid(True, axis='y')
 
-    # Plot (d) Optimierte Ganghöhen-Verteilung
+    # ------------------------------
+    # Plot (d): Optimierte Ganghöhen-Verteilung in der Reaktionszone
     fig4, ax4 = plt.subplots(figsize=(8, 4))
-    seg_index: np.ndarray = np.arange(1, N_seg + 1)
-    ax4.bar(seg_index, opt_ganghoehen, color='b', width=0.8, label="Diskrete Ganghöhe-Werte")
-    ax4.axhline(ganghoehe_min, color='r', ls='--', label="Minimal zulässige Ganghöhe")
-    ax4.axhline(ganghoehe_max, color='k', ls='--', label="Maximal zulässige Ganghöhe")
-    ax4.set_xlabel("Segment-Index")
+    seg_index_reac: np.ndarray = np.arange(1, N_seg_reac + 1)
+    ax4.bar(seg_index_reac, opt_ganghoehen_reac, color='b', width=0.8, label="Reaktionszone")
+    ax4.axhline(0.0082, color='r', linestyle='--', label="Minimal zulässige Ganghöhe")
+    ax4.axhline(ganghoehe_max_reac, color='k', linestyle='--', label="Maximal zulässige Ganghöhe")
+    ax4.set_xlabel("Segment-Index (Reaktionszone)")
     ax4.set_ylabel("Ganghöhe [m]")
-    ax4.set_title("Optimierte Ganghöhen-Verteilung in der Reaktionszone")
+    ax4.set_title("Optimierte Ganghöhen-Verteilung (Reaktionszone)")
     ax4.grid(True, axis='y')
     ax4.legend()
 
-    # Plot (e) Stöchiometrische Verteilung der Reaktionsprodukte
-    fig5, ax5 = plt.subplots(figsize=(6, 4))
-    ax5.plot(x_reac, y_CH3OH, 'b-', label="CH3OH")
-    ax5.plot(x_reac, y_H2O, 'c-', label="H2O")
-    ax5.plot(x_reac, y_H2, 'r-', label="H2")
-    ax5.plot(x_reac, y_CO2, 'g-', label="CO2")
-    ax5.set_xlabel("Reaktorlänge (Reaktionszone) [m]")
-    ax5.set_ylabel("Molare Fraktion")
-    ax5.set_title("Stöchiometrische Verteilung der Reaktionsprodukte")
-    ax5.grid(True)
+    # ------------------------------
+    # Plot (e): Optimierte Ganghöhen-Verteilung in der Vorwärmzone
+    fig5, ax5 = plt.subplots(figsize=(8, 4))
+    seg_index_preheat: np.ndarray = np.arange(1, N_seg_preheat + 1)
+    ax5.bar(seg_index_preheat, opt_ganghoehen_preheat, color='c', width=0.8, label="Vorwärmzone")
+    ax5.axhline(ganghoehe_min_preheat, color='r', linestyle='--', label="Minimal zulässige Ganghöhe")
+    ax5.axhline(ganghoehe_max_preheat, color='k', linestyle='--', label="Maximal zulässige Ganghöhe")
+    ax5.set_xlabel("Segment-Index (Vorwärmzone)")
+    ax5.set_ylabel("Ganghöhe [m]")
+    ax5.set_title("Optimierte Ganghöhen-Verteilung (Vorwärmzone)")
+    ax5.grid(True, axis='y')
     ax5.legend()
 
-    # Neuer Plot (f): Verlauf der Wandtemperatur über die gesamte Reaktorlänge
-    # Vorwärmzone: Konstante 300°C, Reaktionszone: Dynamisch berechnete Wandtemperaturen
+    # ------------------------------
+    # Plot (f): Verlauf der Wandtemperatur über die gesamte Reaktorlänge
     fig6, ax6 = plt.subplots(figsize=(6, 4))
     ax6.plot(x_total, T_wall_total, 'g-', label="Wandtemperatur")
-    # Zeichne die Mindestwandtemperaturlinie (300°C) als rot gestrichelte Linie
+    # Mindestwandtemperaturlinie (300°C) als rot gestrichelte Linie
     ax6.axhline(300, color='r', linestyle='--', label="Mindestwandtemperatur (300°C)")
     # Vertikale Linie zur Kennzeichnung des Übergangs von Vorwärm- zu Reaktionszone
     ax6.axvline(L_vor, color='k', linestyle='--', label="Übergang Vorwärm-/Reaktionszone")
@@ -417,22 +462,20 @@ def main() -> None:
     print(f"rho = {rho:.3f} kg/m³, cp = {cp:.2f} J/(kgK), lam = {lam_fl:.5f} W/(mK)")
     print(f"m_dot = {m_dot:.6f} kg/s (u = {u} m/s)\n")
     print("--- Vorwärmzone ---")
-    print(f"L = {L_vor} m, T_in = 200°C  => T_out = {T_out_vor:.2f}°C")
+    print(f"L = {L_vor} m, T_in = {T_in}°C  => T_out = {T_vor_profile[-1]:.2f}°C")
     print(f"Heizband Leistung (Vorwärmzone): {band_power_density:.1f} W/m")
-    print(f"Berechnete Heizbandlänge in der Vorwärmzone (bei Ganghöhe = {ganghoehe_vor:.4f} m): {band_length_vor:.2f} m")
+    print(f"Berechnete Heizbandlänge in der Vorwärmzone (bei Startganghöhe = {ganghoehe_init_preheat:.4f} m): {L_vor * (np.pi * d_out) / ganghoehe_init_preheat:.2f} m")
     print("\n--- Reaktionszone ---")
-    print(f"L = {L_reac}")
+    print(f"L = {L_reac} m")
     max_temp = np.max(T_reac_profile)
     min_temp = np.min(T_reac_profile)
     print(f"Maximale Fluidtemperatur in der Reaktionszone: {max_temp:.2f} °C")
     print(f"Minimale Fluidtemperatur in der Reaktionszone: {min_temp:.2f} °C")
     print(f"Heizband Leistung (Reaktionszone): {band_power_density:.1f} W/m")
-    seg_len: float = L_reac / N_seg
+    seg_len: float = L_reac / N_seg_reac
     total_bandlen_reac: float = 0.0
-    for ganghoehe in opt_ganghoehen:
-        turns_m: float = 1.0 / ganghoehe
-        circumference: float = np.pi * d_out
-        total_bandlen_reac += turns_m * circumference * seg_len
+    for gang in opt_ganghoehen_reac:
+        total_bandlen_reac += (1.0 / gang) * (np.pi * d_out) * seg_len
     total_power_reac: float = band_power_density * total_bandlen_reac
     print(f"Heizbandlänge in der Reaktionszone: {total_bandlen_reac:.2f} m")
     print(f"-> Damit Heizleistung ~ {total_power_reac:.1f} W (Reaktionszone)")
