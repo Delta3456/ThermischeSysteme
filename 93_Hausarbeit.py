@@ -1,5 +1,5 @@
 """
-Montag, 10.02.25
+Dienstag, 11.02.25
 @author Janik Focken
 --------------------------------
 Dritte Hausarbeit - Reaktor
@@ -246,10 +246,9 @@ def heat_loss_total(T_wall_C: float, T_amb_C: float, length: float, d_in: float,
 # ---------------------------------------------------------
 # F) Berechnung des inneren Wärmeübergangskoeffizienten (alpha_i)
 # ---------------------------------------------------------
-def calc_alpha_i(T_degC: float, p_pa: float, m_dot: float, d_in: float, x_methanol: float = 0.5,
-                 heating: bool = True) -> float:
+def calc_alpha_i(T_degC: float, p_pa: float, m_dot: float, d_in: float, x_methanol: float = 0.5) -> float:
     """
-    Berechnet alpha_i [W/(m²·K)] mittels der Dittus-Boelter-Korrelation.
+    Berechnet alpha_i [W/(m²·K)]
     """
     rho, cp, lam = fluid_properties(T_degC, p_pa, x_methanol)
     T_k = T_degC + CELSIUS_TO_KELVIN
@@ -298,8 +297,7 @@ def main() -> None:
     m_dot: float = rho * u * A_in  # Massenstrom [kg/s]
 
     # Wärmeübergangs- und Reaktionsdaten für die Reaktionszone
-    alpha_i = calc_alpha_i(T_mean, p_reac, m_dot, d_in, x_methanol=0.5, heating=False)
-    alpha_i = 300  # Beispielwert; ggf. experimentell anzupassen
+    alpha_i = calc_alpha_i(T_mean, p_reac, m_dot, d_in, x_methanol=0.5)
     n_dot_meoh: float = 0.01  # mol/s, Stoffmengenstrom Methanol
     dH_reac: float = 49200.0  # J/mol, Reaktionsenthalpie
     X_meoh: float = 0.99      # Zielumsatz (99%)
@@ -457,7 +455,7 @@ def main() -> None:
     seg_index_reac: np.ndarray = np.arange(1, N_seg_reac + 1)
     ax4.bar(seg_index_reac, opt_ganghoehen_reac, color='b', width=0.8, label="Reaktionszone")
     ax4.axhline(0.0082, color='r', linestyle='--', label="Minimal zulässige Ganghöhe")
-    ax4.axhline(ganghoehe_max_reac, color='k', linestyle='--', label="Maximal zulässige Ganghöhe")
+    ax4.axhline(ganghoehe_max_reac, color='k', linestyle='--')
     ax4.set_xlabel("Segment-Index (Reaktionszone)")
     ax4.set_ylabel("Ganghöhe [m]")
     ax4.set_title("Optimierte Ganghöhen-Verteilung (Reaktionszone)")
@@ -470,7 +468,7 @@ def main() -> None:
     seg_index_preheat: np.ndarray = np.arange(1, N_seg_preheat + 1)
     ax5.bar(seg_index_preheat, opt_ganghoehen_preheat, color='c', width=0.8, label="Vorwärmzone")
     ax5.axhline(ganghoehe_min_preheat, color='r', linestyle='--', label="Minimal zulässige Ganghöhe (Vorwärmzone)")
-    ax5.axhline(ganghoehe_max_preheat, color='k', linestyle='--', label="Maximal zulässige Ganghöhe")
+    ax5.axhline(ganghoehe_max_preheat, color='k', linestyle='--')
     ax5.set_xlabel("Segment-Index (Vorwärmzone)")
     ax5.set_ylabel("Ganghöhe [m]")
     ax5.set_title("Optimierte Ganghöhen-Verteilung (Vorwärmzone)")
